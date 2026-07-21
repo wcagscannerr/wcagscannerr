@@ -25,26 +25,6 @@ type PlanTile = {
 // highest-intent upsell.
 const plans: PlanTile[] = [
   {
-    id: 'free',
-    name: 'Free',
-    description: 'For individuals getting started',
-    prices: { monthly: 0, annually: 0 },
-    icon: Sparkles,
-    features: [
-      '3 scans per month',
-      '3 page renders per month',
-      '1 page per scan',
-      'Basic violation report',
-      'CSV export',
-      'WCAG 2.1 scanning',
-      'Community support',
-    ],
-    cta: 'Get Started',
-    popular: false,
-    gradient: 'from-slate-500/10 to-gray-500/10',
-    glowColor: 'hover:shadow-slate-500/10',
-  },
-  {
     id: 'starter',
     name: 'Starter',
     description: 'For professionals & small teams',
@@ -85,9 +65,9 @@ const plans: PlanTile[] = [
       'VPAT & ACR generation',
     ],
     cta: 'Start Growth Trial',
-    popular: true, // ≤ Step 2 spec: badge sits on Growth
-    gradient: 'from-primary/20 to-violet-500/20',
-    glowColor: 'hover:shadow-primary/20',
+    popular: true,
+    gradient: 'from-blue-500/15 to-cyan-500/15',
+    glowColor: 'hover:shadow-blue-500/15',
   },
   {
     id: 'enterprise',
@@ -125,11 +105,6 @@ export default function Pricing() {
   async function handleCtaClick(planId: string) {
     if (pendingPlan) return;
     const billingPeriod = isAnnual ? 'annual' : 'monthly';
-
-    if (planId === 'free') {
-      window.location.href = `/signup?plan=${planId}&billing=${billingPeriod}`;
-      return;
-    }
 
     if (isSignedIn) {
       setPendingPlan(planId);
@@ -175,14 +150,14 @@ export default function Pricing() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto mb-12"
           >
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium tracking-wide mb-4">
-              <Sparkles className="w-3.5 h-3.5" /> Simple Pricing
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium tracking-wide mb-4">
+              <Sparkles className="w-3.5 h-3.5" /> Try for Free
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Choose your <span className="gradient-text">plan</span>
+              Start <span className="gradient-text">free</span>, scale when ready
             </h2>
             <p className="text-muted-foreground">
-              Start free, upgrade when you need more power. No hidden fees.
+              Try WCAG Scanner with 3 free scans per month. No credit card required.
             </p>
           </motion.div>
 
@@ -210,7 +185,7 @@ export default function Pricing() {
 
         {/* Pricing Cards */}
         {/* Step 2: lg:grid-cols-3 → lg:grid-cols-4 to fit Starter/Growth/Enterprise */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7 items-start">
           {plans.map((plan) => (
             <motion.div
               key={plan.id}
