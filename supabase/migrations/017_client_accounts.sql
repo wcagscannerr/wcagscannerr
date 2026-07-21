@@ -99,6 +99,15 @@ CREATE POLICY "Service role full access to client_accounts"
 CREATE POLICY "Service role full access to client_branding"
   ON client_branding FOR ALL USING (true) WITH CHECK (true);
 
+-- Ensure the update_updated_at_column() function exists (may not exist on remote DB)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
 -- Auto-update updated_at triggers
 CREATE TRIGGER set_client_accounts_updated_at
   BEFORE UPDATE ON client_accounts
