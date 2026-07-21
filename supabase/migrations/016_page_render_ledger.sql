@@ -6,9 +6,9 @@
 -- two quotas (Step 2 already distinguished scansPerMonth and
 -- multiscanPageCap; this adds a third orthogonal counter).
 --
--- Pre-launch: no live paying customers yet, so the backfill
--- below is safe — no auditor will see historical scan rows
--- missing page-render grants.
+-- Pre-launch: no live paying customers yet, so no backfill is
+-- needed. New users after deploy get the +pageRendersPerMonth
+-- row from ensureMonthlyGrant() in code.
 -- =============================================================
 
 -- The existing credit_reason enum is reused; we only add ONE new
@@ -35,39 +35,9 @@ DROP INDEX IF EXISTS idx_credits_user_period;
 CREATE INDEX idx_credits_user_metric_period
   ON scan_credits_ledger (user_id, metric, created_at);
 
--- Backfill: any user who already received a scan monthly_grant for
--- the current calendar-month period also receives the matching
--- page_render monthly_grant, so a deploy mid-period doesn't
--- start them at 0 render quota. New users after deploy get the
--- +pageRendersPerMonth row from ensureMonthlyGrant() in code.
-INSERT INTO scan_credits_ledger (user_id, scan_id, metric, delta, reason, created_at, metadata)
-SELECT
-  s.user_id,
-  s.scan_id,
-  'page_render'::ledger_metric,
-  CASE s.user_id
-    WHEN s.user_id THEN (
-      SELECT COALESCE(pl->>'pageRendersPerMonth', '3')::int
-      FROM (
-        SELECT to_jsonb(p.limits) AS pl
-        FROM profiles p WHERE p.id = s.user_id
-      ) lp
-    )
-  END,
-  'monthly_grant'::credit_reason,
-  s.created_at,
-  jsonb_build_object('source', '016_backfill', 'paired_with', s.id)
-FROM scan_credits_ledger s
-WHERE s.reason = 'monthly_grant'
-  AND s.metric = 'scan'
-  AND s.created_at >= date_trunc('month', timezone('utc', now()))
-  AND NOT EXISTS (
-    SELECT 1 FROM scan_credits_ledger pr
-    WHERE pr.user_id = s.user_id
-      AND pr.metric = 'page_render'
-      AND pr.reason = 'monthly_grant'
-      AND pr.created_at >= date_trunc('month', timezone('utc', now()))
-  );
+-- No backfill needed: pre-launch means no paying customers with
+-- historical scan monthly_grant rows. New users get their
+-- page_render monthly_grant from ensureMonthlyGrant() in code.
 
 -- RLS — keep the existing row-level policy; the metric column
 -- is just a filterable label, no separate policy needed.
