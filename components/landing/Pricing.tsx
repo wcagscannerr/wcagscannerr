@@ -250,7 +250,7 @@ export default function Pricing() {
                           </p>
                           {!isAnnual && (
                             <p className="text-xs text-primary font-medium">
-                              5-day free trial included
+                              3-day free trial included
                             </p>
                           )}
                         </motion.div>
