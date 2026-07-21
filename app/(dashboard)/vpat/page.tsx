@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Metadata } from 'next'
-import { FileText, Lock, ArrowUpRight } from 'lucide-react'
+import { FileText, Shield, ArrowUpRight, Zap } from 'lucide-react'
 import { createServiceClient } from '@/lib/supabase/server'
 import { PLANS } from '@/lib/dodo/plans'
 import { GenerateVpatButton } from '@/components/reports/GenerateVpatButton'
@@ -41,7 +41,7 @@ export default async function VpatListPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Check if user has agency plan — VPAT is agency-exclusive
+  // Check if user has VPAT access — Growth+ only
   const db = createServiceClient()
   const { data: profile } = await db
     .from('profiles')
@@ -55,20 +55,20 @@ export default async function VpatListPage() {
   if (!hasVpatAccess) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6">
-          <Lock className="w-8 h-8 text-amber-400" />
+        <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6">
+          <Shield className="w-10 h-10 text-amber-400" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">Agency-Only Feature</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Growth+ Feature</h1>
         <p className="text-muted-foreground max-w-md mb-8">
-          VPAT / ACR generation is exclusive to Agency plan subscribers. 
+          VPAT / ACR generation is available on Growth and Enterprise plans.
           Upgrade to generate formal accessibility conformance reports for your clients.
         </p>
         <Link
-          href="/billing"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
+          href="/pricing"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity btn-magnetic shadow-lg shadow-primary/20"
         >
-          <ArrowUpRight className="w-4 h-4" />
-          Upgrade to Agency
+          <Zap className="w-4 h-4" />
+          Upgrade to Growth
         </Link>
       </div>
     )
