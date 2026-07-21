@@ -435,16 +435,16 @@ export default function MonitoringPage() {
         <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6">
           <Shield className="w-10 h-10 text-amber-400" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">Pro Feature</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Starter+ Feature</h1>
         <p className="text-muted-foreground max-w-md mb-8">
-          Site monitoring with real-time uptime tracking, violation alerts, and performance analytics is available on Pro and Agency plans.
+          Site monitoring with real-time uptime tracking, violation alerts, and performance analytics is available on Starter and above plans.
         </p>
         <Link
           href="/pricing"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity btn-magnetic shadow-lg shadow-primary/20"
         >
           <Zap className="w-4 h-4" />
-          Upgrade to Pro
+          Upgrade to Starter
         </Link>
       </motion.div>
     )

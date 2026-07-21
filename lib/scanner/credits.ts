@@ -101,7 +101,17 @@ export async function ensureMonthlyGrant(userId: string): Promise<void> {
   }
 
   if (rowsToInsert.length > 0) {
-    await db.from('scan_credits_ledger').insert(rowsToInsert);
+    try {
+      await db.from('scan_credits_ledger').insert(rowsToInsert);
+    } catch (err: any) {
+      // Unique index violation (idx_credits_monthly_grant_unique) means
+      // a concurrent request already inserted the grant between our SELECT
+      // check above and this INSERT. That's fine — the SUM is correct, just
+      // skip the duplicate.
+      if (err?.code !== '23505') {
+        throw err; // Re-throw unexpected errors
+      }
+    }
   }
 }
 
