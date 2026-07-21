@@ -4,7 +4,7 @@
 // All quota reads/writes flow through these helpers so
 // we never touch profiles.scans_used_this_month (gone
 // since migration 015). Race-safe because SUM(delta)
-// inside READ COMMITTED is lock-free for our access
+// inside READ COMMITTgED is lock-free for our access
 // pattern (only writers in this codebase touch the table).
 //
 // Step 8 adds a parallel 'page_render' metric on the
