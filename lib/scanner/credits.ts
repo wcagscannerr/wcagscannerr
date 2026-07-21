@@ -105,7 +105,7 @@ export async function ensureMonthlyGrant(userId: string): Promise<void> {
   }
 }
 
-// ── Reads: scans / page renders remaining this period ──
+// ── Reads: scanfs / page renders remaining this period ──
 
 export async function getScansRemaining(userId: string): Promise<number> {
   await ensureMonthlyGrant(userId);
