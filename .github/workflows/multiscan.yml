@@ -1,0 +1,27 @@
+name: Multi-page Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to scan'
+        required: true
+      pages:
+        description: 'Number of pages to scan'
+        default: '10'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Chromium
+        run: sudo apt-get update && sudo apt-get install -y chromium-browser
+      
+      - name: Run multi-page scan
+        run: node scripts/multiscan-worker.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
