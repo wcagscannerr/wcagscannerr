@@ -8,7 +8,7 @@ import { useUser } from '@/hooks/useUser';
 import { toast } from 'sonner';
 
 type PlanTile = {
-  id: 'free' | 'starter' | 'growth' | 'enterprise';
+  id: 'starter' | 'growth' | 'enterprise';
   name: string;
   description: string;
   prices: { monthly: number; annually: number };
@@ -248,9 +248,7 @@ export default function Pricing() {
                               ? `Billed annually ($${plan.prices.annually}/year) · 2 months free`
                               : 'Billed monthly'}
                           </p>
-                          {/* Step 2: free-trial note applies to any paid tier,
-                              not just the legacy pro/agency. */}
-                          {!isAnnual && plan.id !== 'free' && (
+                          {!isAnnual && (
                             <p className="text-xs text-primary font-medium">
                               5-day free trial included
                             </p>
