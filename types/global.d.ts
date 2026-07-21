@@ -155,6 +155,12 @@ declare module 'lucide-react' {
   export const SquareCheck: LucideIcon;
   export const CheckSquare: LucideIcon;
   export const Cookie: LucideIcon;
+  export const Send: LucideIcon;
+  export const ShieldOff: LucideIcon;
+  export const Rocket: LucideIcon;
+  export const Terminal: LucideIcon;
+  export const Ban: LucideIcon;
+  export const ArrowUp: LucideIcon;
 }
 
 declare module 'stripe' {

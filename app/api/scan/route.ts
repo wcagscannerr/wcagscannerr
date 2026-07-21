@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
 
   let useResponsive = false;
   let allowScreenshot = false;
+  let requestedRenders = 1;
 
   if (user) {
     const { data: profileData } = await db
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       // Step 8: page-render hard cap. Pre-check before consuming either
       // credit so a rejection does not need a refund of the scan credit.
       // Responsive scans render 3 viewports; non-responsive render 1.
-      const requestedRenders = useResponsive ? 3 : 1;
+      requestedRenders = useResponsive ? 3 : 1;
       const rendersRemaining = await getPageRendersRemaining(user.id);
       if (rendersRemaining < requestedRenders) {
         await logPageOveragePending(user.id, null, requestedRenders, planLimits.pageRendersPerMonth);
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let browser: import('puppeteer-core').Browser | null = null;
+  let browser: import('puppeteer').Browser | null = null;
 
   try {
     const { launchBrowser, runScan } = await import('@/lib/scanner/engine');
@@ -397,8 +398,8 @@ export async function POST(request: NextRequest) {
     // Step 4: refund if it's on our side. invalid_target is unreachable
     // here because isUrlSafe() rejects BEFORE this catch arm runs and
     // never even creates a scan row.
-    let refund = { issued: false, capped: false, failure_reason: 'engine_failure' as const };
-    let pageRefund = { issued: false, capped: false, failure_reason: 'engine_failure' as const };
+    let refund: { issued: boolean; capped: boolean; failure_reason: string } = { issued: false, capped: false, failure_reason: 'engine_failure' };
+    let pageRefund: { issued: boolean; capped: boolean; failure_reason: string } = { issued: false, capped: false, failure_reason: 'engine_failure' };
     if (userId) {
       try {
         refund = await refundCredit(userId, scanId, classifyFailure(scanError));

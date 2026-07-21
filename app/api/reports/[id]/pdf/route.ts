@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer-core'
+import puppeteer from 'puppeteer'
 import chromium from '@sparticuz/chromium-min'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'

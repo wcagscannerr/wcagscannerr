@@ -148,14 +148,13 @@ async function getMd5(): Promise<(s: string) => string> {
       return md5blks;
     }
     const s = md51(input);
+    function add32(a: number, b: number) {
+      return (a + b) & 0xffffffff;
+    }
     return (s[0] >>> 0).toString(16).padStart(8, '0') +
            (s[1] >>> 0).toString(16).padStart(8, '0') +
            (s[2] >>> 0).toString(16).padStart(8, '0') +
            (s[3] >>> 0).toString(16).padStart(8, '0');
-    function add32(a: number, b: number) {
-      return (a + b) & 0xffffffff;
-    }
-    return md5(input);
   };
   return md5Cache;
 }

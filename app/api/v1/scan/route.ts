@@ -182,26 +182,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── 6. Check scan limit (Step 4: ledger-driven) ──      const remaining = await getScansRemaining(apiKey.user_id)
-      // Step 8: separate page-render hard cap. Enterprise page-render cap is
-      // 2,500/mo. Reject top-up attempts instead of silently over-running
-      // (the cap is metered in Phase 2 — Phase 1 logs `overage_pending` rows).
-      const requestedRenders = max_pages > 1 ? max_pages : 1
-      const rendersRemaining = await getPageRendersRemaining(apiKey.user_id)
-      if (rendersRemaining < requestedRenders) {
-        await logPageOveragePending(
-          apiKey.user_id, null, requestedRenders, planLimits.pageRendersPerMonth,
-        )
-        return NextResponse.json(
-          {
-            error: 'Page render limit reached',
-            code: 'PAGE_RENDER_LIMIT_REACHED',
-            message: `Your plan allows ${planLimits.pageRendersPerMonth} page renders per month. This ${max_pages}-page scan would exceed the remaining quota.`,
-            upgrade_url: '/pricing',
-          },
-          { status: 429 }
-        )
-      }
+    // ── 6. Check scan limit (Step 4: ledger-driven) ──
+    const remaining = await getScansRemaining(apiKey.user_id)
+    // Step 8: separate page-render hard cap. Enterprise page-render cap is
+    // 2,500/mo. Reject top-up attempts instead of silently over-running
+    // (the cap is metered in Phase 2 — Phase 1 logs `overage_pending` rows).
+    const requestedRenders = max_pages > 1 ? max_pages : 1
+    const rendersRemaining = await getPageRendersRemaining(apiKey.user_id)
+    if (rendersRemaining < requestedRenders) {
+      await logPageOveragePending(
+        apiKey.user_id, null, requestedRenders, planLimits.pageRendersPerMonth,
+      )
+      return NextResponse.json(
+        {
+          error: 'Page render limit reached',
+          code: 'PAGE_RENDER_LIMIT_REACHED',
+          message: `Your plan allows ${planLimits.pageRendersPerMonth} page renders per month. This ${max_pages}-page scan would exceed the remaining quota.`,
+          upgrade_url: '/pricing',
+        },
+        { status: 429 }
+      )
+    }
     if (remaining <= 0) {
       return NextResponse.json(
         {
@@ -328,6 +329,9 @@ export async function POST(request: NextRequest) {
         .update({ last_used_at: new Date().toISOString() })
         .eq('id', apiKey.id)
 
+      // ── 14. Prepare response ──
+      const passed = result.score >= fail_threshold
+
       // Step 5: log usage (success path) so the Enterprise dashboard
       // shows recent calls per key.
       try {
@@ -343,9 +347,6 @@ export async function POST(request: NextRequest) {
       } catch (usageErr) {
         console.error('[API v1/scan] Usage log write failed:', usageErr)
       }
-
-      // ── 14. Prepare response ──
-      const passed = result.score >= fail_threshold
 
       return NextResponse.json(
         {
@@ -395,7 +396,7 @@ export async function POST(request: NextRequest) {
         .eq('id', scanId)
 
       // Step 4: refund if it's on our side.
-      let refund = { issued: false, capped: false, failure_reason: 'engine_failure' as const }
+      let refund: { issued: boolean; capped: boolean; failure_reason: string } = { issued: false, capped: false, failure_reason: 'engine_failure' }
       try {
         refund = await refundCredit(apiKey.user_id, scanId, classifyFailure(scanError))
         // Step 8: parallel page-render refund

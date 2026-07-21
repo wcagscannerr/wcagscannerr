@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Check, Zap, Building2, ArrowRight, Sparkles, Loader2, Rocket } from 'lucide-react';
+import { Check, Zap, Building2, ArrowRight, Sparkles, Loader2, Send } from 'lucide-react';
 import { useState } from 'react';
 import { useUser } from '@/hooks/useUser';
 import { toast } from 'sonner';
@@ -94,7 +94,7 @@ const plans: PlanTile[] = [
     name: 'Enterprise',
     description: 'For large orgs and CI/CD workflows',
     prices: { monthly: 175, annually: 1750 },
-    icon: Rocket,
+    icon: Send,
     features: [
       '500 scans per month',
       '2,500 page renders per month (metered overage beyond)',

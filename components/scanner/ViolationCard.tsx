@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ExternalLink, Check, X, Clock, Ban, AlertTriangle, Loader2 } from 'lucide-react';
+import { ChevronDown, ExternalLink, Check, X, Clock, ShieldOff, AlertTriangle, Loader2 } from 'lucide-react';
 import type { ScanViolation } from '@/types/scan';
 import { computeStableKeyForStatusEndpoint } from '@/lib/scanner/stableKey';
 import ContrastSimulator from '@/components/scanner/ContrastSimulator';
@@ -207,7 +207,7 @@ export default function ViolationCard({ violation, index, scanId }: Props) {
                     onClick={() => save('false_positive')}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 hover:bg-fuchsia-500/25 disabled:opacity-50"
                   >
-                    <Ban className="w-3 h-3" /> False positive
+                    <ShieldOff className="w-3 h-3" /> False positive
                   </button>
                   <button
                     type="button"

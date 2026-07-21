@@ -132,8 +132,6 @@ export default function BillingPage() {
         {loading ? 'Loading...' : 'Manage Subscription'}
       </button>
     ) : (
-      {/* Step 2: default upgrade target is now Starter ($29/mo), the
-          new mid-tier equivalent of the old Pro plan. */}
       <button
         onClick={() => handleUpgrade('starter')}
         disabled={loading}

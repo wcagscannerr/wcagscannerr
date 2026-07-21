@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Key, Copy, Trash2, Plus, Loader2, Shield, AlertTriangle, Lock, Rocket, CheckCircle2, XCircle, Clock, Terminal } from 'lucide-react'
+import { Key, Copy, Trash2, Plus, Loader2, Shield, AlertTriangle, Lock, Send, CheckCircle2, XCircle, Clock, Code } from 'lucide-react'
 import { useSubscription } from '@/hooks/useSubscription'
 import { toast } from 'sonner'
 
@@ -181,7 +181,7 @@ export default function ApiKeysPage() {
               href="/pricing"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium btn-magnetic shadow-lg shadow-primary/20"
             >
-              <Rocket className="w-4 h-4" />
+              <Send className="w-4 h-4" />
               Upgrade to Enterprise
             </Link>
             <Link
@@ -263,7 +263,7 @@ export default function ApiKeysPage() {
       {/* ── Step 5 — CI/CD & Pipeline Integration ── */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <Terminal className="w-4 h-4 text-primary" />
+          <Code className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">CI/CD & Pipeline Integration</h2>
         </div>
         <p className="text-xs text-[var(--text-muted)]">

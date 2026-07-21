@@ -2,7 +2,7 @@
  * WCAG Scanner Engine — v2.2 (Clean: axe-core only + new scoring)
  */
 
-import puppeteer, { Browser, Page, Frame, Viewport } from 'puppeteer-core'
+import puppeteer, { Browser, Page, Frame, Viewport } from 'puppeteer'
 import chromium from '@sparticuz/chromium-min'
 
 // ──────────────────────────────────────────────

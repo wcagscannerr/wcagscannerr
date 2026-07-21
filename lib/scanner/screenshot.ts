@@ -7,7 +7,7 @@
  * overlay using these coordinates converted to percentages.
  */
 
-import { Page } from 'puppeteer-core'
+import { Page } from 'puppeteer'
 
 export interface ScreenshotMarker {
   index: number

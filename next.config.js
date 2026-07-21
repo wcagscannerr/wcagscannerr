@@ -7,7 +7,7 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: [
-      'puppeteer-core',
+      'puppeteer',
       '@sparticuz/chromium-min',
     ],
     optimizePackageImports: ['lucide-react', 'recharts'],
