@@ -6,9 +6,10 @@
 -- own usage" RLS works without a join back through api_keys.
 -- ================================================
 
-CREATE TABLE api_key_usage (
+-- Create table without foreign key to api_keys (may not exist yet)
+CREATE TABLE IF NOT EXISTS api_key_usage (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_key_id UUID NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+  api_key_id UUID NOT NULL,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   -- Target URL the user submitted (may be normalized; not the key).
   target_url TEXT NOT NULL,
@@ -25,12 +26,27 @@ CREATE TABLE api_key_usage (
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- Conditionally add foreign key to api_keys table if it exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'api_keys') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'api_key_usage_api_key_id_fkey'
+    ) THEN
+      ALTER TABLE api_key_usage
+        ADD CONSTRAINT api_key_usage_api_key_id_fkey
+        FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE;
+    END IF;
+  END IF;
+END $$;
+
 -- Last 20 per key: (api_key_id, created_at DESC) lookup.
-CREATE INDEX idx_api_key_usage_key_recent
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_key_recent
   ON api_key_usage (api_key_id, created_at DESC);
 
 -- Per-user admin queries: usage on any of my keys.
-CREATE INDEX idx_api_key_usage_user_recent
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_user_recent
   ON api_key_usage (user_id, created_at DESC);
 
 -- RLS: a user can read only their own usage rows; the routes that
@@ -40,3 +56,7 @@ ALTER TABLE api_key_usage ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read their own API key usage"
   ON api_key_usage FOR SELECT
   USING (auth.uid() = user_id);
+
+-- Service role full access
+CREATE POLICY "Service role full access to api_key_usage"
+  ON api_key_usage FOR ALL USING (true) WITH CHECK (true);
