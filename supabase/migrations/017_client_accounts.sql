@@ -9,7 +9,7 @@
 
 -- Client accounts: sub-accounts owned by an agency user.
 -- Each row represents one client of the agency.
-CREATE TABLE client_accounts (
+CREATE TABLE IF NOT EXISTS client_accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE client_accounts (
 
 -- White-label settings per client account.
 -- Controls branding on PDF reports and VPAT documents.
-CREATE TABLE client_branding (
+CREATE TABLE IF NOT EXISTS client_branding (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_account_id UUID NOT NULL REFERENCES client_accounts(id) ON DELETE CASCADE,
   company_name TEXT NOT NULL DEFAULT 'My Agency',
@@ -40,18 +40,41 @@ CREATE TABLE client_branding (
 
 -- Link scans to client accounts (nullable: direct scans have no client).
 -- This lets agencies attribute scans to specific clients.
-ALTER TABLE scans
-  ADD COLUMN client_account_id UUID REFERENCES client_accounts(id) ON DELETE SET NULL;
+-- Only runs if the scans table exists (may not exist on fresh databases).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'scans') THEN
+    ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_account_id UUID REFERENCES client_accounts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Link reports to client accounts for white-label PDF generation.
-ALTER TABLE reports
-  ADD COLUMN client_account_id UUID REFERENCES client_accounts(id) ON DELETE SET NULL;
+-- Only runs if the reports table exists (may not exist on fresh databases).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'reports') THEN
+    ALTER TABLE reports ADD COLUMN IF NOT EXISTS client_account_id UUID REFERENCES client_accounts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Indexes for fast lookups
-CREATE INDEX idx_client_accounts_parent ON client_accounts(parent_user_id);
-CREATE INDEX idx_client_branding_client ON client_branding(client_account_id);
-CREATE INDEX idx_scans_client_account ON scans(client_account_id) WHERE client_account_id IS NOT NULL;
-CREATE INDEX idx_reports_client_account ON reports(client_account_id) WHERE client_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_client_accounts_parent ON client_accounts(parent_user_id);
+CREATE INDEX IF NOT EXISTS idx_client_branding_client ON client_branding(client_account_id);
+
+-- Conditional indexes on scans/reports (only if tables and columns exist)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'scans' AND column_name = 'client_account_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_scans_client_account ON scans(client_account_id) WHERE client_account_id IS NOT NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'reports' AND column_name = 'client_account_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_reports_client_account ON reports(client_account_id) WHERE client_account_id IS NOT NULL;
+  END IF;
+END $$;
 
 -- RLS: agencies can only see their own client accounts
 ALTER TABLE client_accounts ENABLE ROW LEVEL SECURITY;
