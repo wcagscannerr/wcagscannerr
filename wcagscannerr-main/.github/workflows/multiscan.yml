@@ -1,0 +1,81 @@
+name: Multi-Page Website Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_id:
+        description: 'Batch scan ID'
+        required: true
+      user_id:
+        description: 'User ID'
+        required: true
+      base_url:
+        description: 'Base URL to scan'
+        required: true
+      page_count:
+        description: 'Number of pages to scan'
+        required: true
+      wcag_version:
+        description: 'WCAG version (2.1 or 2.2)'
+        required: false
+        default: '2.1'
+      wcag_level:
+        description: 'WCAG level (A, AA, AAA)'
+        required: false
+        default: 'AA'
+      scan_type:
+        description: 'Scan type (multiscan)'
+        required: false
+        default: 'multiscan'
+
+jobs:
+  multiscan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            chromium-browser \
+            libnss3 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libgbm1 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libasound2t64 \
+            libatspi2.0-0 \
+            libxshmfence1
+
+      - name: Run multiscan
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          node scripts/multiscan-worker.mjs \
+            --batch-id="${{ inputs.batch_id }}" \
+            --user-id="${{ inputs.user_id }}" \
+            --base-url="${{ inputs.base_url }}" \
+            --page-count="${{ inputs.page_count }}" \
+            --wcag-version="${{ inputs.wcag_version }}" \
+            --wcag-level="${{ inputs.wcag_level }}"

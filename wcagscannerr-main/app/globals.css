@@ -1,0 +1,357 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 262.1 83.3% 57.8%;
+    --accent-foreground: 210 40% 98%;
+    --accent-hover: 262 83% 50%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 13% 55%;
+    --input: 220 13% 55%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0px;
+    
+    /* WCAG Scanner Custom - Light Mode Premium */
+    --surface: 0 0% 100%;
+    --surface-elevated: 220 14% 96%;
+    --text-primary: 222 47% 11%;
+    --text-secondary: 215 16% 47%;
+    --text-muted: 215 14% 65%;
+    --success: 160 84% 39%;
+    --danger: 0 84% 60%;
+    --warning: 38 92% 50%;
+    --info: 217 91% 60%;
+    --glass-border: 220 13% 55%;
+    --glass-bg: 0 0% 100% / 0.7;
+    --glow-primary: 262 83% 58% / 0.15;
+    --glow-success: 160 84% 39% / 0.12;
+    --glow-danger: 0 84% 60% / 0.12;
+    --glow-warning: 38 92% 50% / 0.12;
+
+    /* Violation severity colors - referenced by ViolationCard.tsx via
+       bg-severity-critical etc, but these variables didn't exist at all
+       until now, so every severity dot/background was invisible. */
+    --critical: 0 72% 51%;
+    --serious: 24 85% 53%;
+    --moderate: 38 92% 50%;
+    --minor: 217 91% 60%;
+
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+    --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.06);
+    --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.08);
+    --shadow-glow: 0 0 24px hsl(var(--glow-primary));
+    --shadow-glow-strong: 0 0 48px hsl(262 83% 58% / 0.28);
+    --accent-glow-strong: 262 83% 58% / 0.28;
+  }
+
+  .dark {
+    --background: 240 20% 2%;
+    --foreground: 210 40% 98%;
+    --card: 240 16% 5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 240 16% 5%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 263 70% 66%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 12% 8%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 240 12% 8%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 263 70% 66%;
+    --accent-foreground: 210 40% 98%;
+    --accent-hover: 263 70% 72%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 10% 12%;
+    --input: 240 10% 12%;
+    --ring: 263 70% 66%;
+    
+    /* WCAG Scanner Custom - Dark Mode (Deep Void Black) */
+    --surface: 240 20% 2%;
+    --surface-elevated: 240 14% 9%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 65%;
+    --text-muted: 215 16% 47%;
+    --success: 160 84% 39%;
+    --danger: 0 72% 51%;
+    --warning: 38 92% 50%;
+    --info: 217 91% 60%;
+    --glass-border: 240 10% 12%;
+    --glass-bg: 240 16% 5% / 0.6;
+    --glow-primary: 263 70% 66% / 0.2;
+    --glow-success: 160 84% 39% / 0.15;
+    --glow-danger: 0 72% 51% / 0.15;
+    --glow-warning: 38 92% 50% / 0.2;
+
+    --critical: 0 91% 71%;
+    --serious: 27 96% 61%;
+    --moderate: 45 93% 58%;
+    --minor: 213 94% 68%;
+
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
+    --shadow-glow: 0 0 32px hsl(var(--glow-primary));
+    --shadow-glow-strong: 0 0 64px hsl(263 70% 66% / 0.45);
+    --accent-glow-strong: 263 70% 66% / 0.45;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Premium Mesh Glow Effects */
+  .mesh-glow { position: relative; overflow: hidden; }
+  .mesh-glow::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 30% 30%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 70%, hsl(var(--accent) / 0.06) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+  .mesh-glow-purple {
+    position: relative; overflow: hidden;
+  }
+  .mesh-glow-purple::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 0%, hsl(263 70% 66% / 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, hsl(250 60% 55% / 0.08) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+  
+  /* Glassmorphism Panels */
+  .glass-panel {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+  .glass-panel-strong {
+    background: hsl(var(--surface-elevated) / 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+  
+  /* Glow Borders */
+  .glow-border {
+    position: relative;
+    border: 1px solid hsl(var(--glass-border));
+    transition: all 0.3s ease;
+  }
+  .glow-border:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 20px hsl(var(--glow-primary)),
+                inset 0 1px 0 0 hsl(var(--primary) / 0.1);
+  }
+  .glow-border-success:hover {
+    border-color: hsl(var(--success) / 0.3);
+    box-shadow: 0 0 20px hsl(var(--glow-success)),
+                inset 0 1px 0 0 hsl(var(--success) / 0.1);
+  }
+  .glow-border-danger:hover {
+    border-color: hsl(var(--danger) / 0.3);
+    box-shadow: 0 0 20px hsl(var(--glow-danger)),
+                inset 0 1px 0 0 hsl(var(--danger) / 0.1);
+  }
+  
+  /* Gradient Text */
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(280 70% 60%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Magnetic Button Effect */
+  .btn-magnetic {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+  .btn-magnetic::before {
+    content: '';
+    @apply absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300;
+  }
+  .btn-magnetic:hover::before { @apply opacity-100; }
+  .btn-magnetic:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.3);
+  }
+  
+  /* Card Lift Effect */
+  .card-lift {
+    @apply transition-all duration-300;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px -4px hsl(var(--primary) / 0.1);
+  }
+  
+  /* Micro Badge Styles */
+  .badge-glow {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase;
+  }
+  .badge-glow-success {
+    @apply badge-glow bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+    box-shadow: 0 0 8px hsl(var(--glow-success));
+  }
+  .badge-glow-danger {
+    @apply badge-glow bg-red-500/10 text-red-400 border border-red-500/20;
+    box-shadow: 0 0 8px hsl(var(--glow-danger));
+  }
+  .badge-glow-warning {
+    @apply badge-glow bg-amber-500/10 text-amber-400 border border-amber-500/20;
+  }
+  .badge-glow-info {
+    @apply badge-glow bg-blue-500/10 text-blue-400 border border-blue-500/20;
+  }
+  
+  /* Section Divider */
+  .section-divider {
+    @apply h-px w-full;
+    background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
+  }
+  
+  /* Scrollbahr */
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+html { scroll-behavior: smooth; }
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+}
+
+/* ──────────────────────────────────────────────
+   Smooth Cursor & Page Transitions
+   ────────────────────────────────────────────── */
+
+/* Smooth cursor for links and buttons only — not form inputs */
+a, button, [role="button"] {
+  cursor: pointer;
+}
+
+/* Focus ring — beautiful visible focus for accessibility */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Page entrance animation — applied via CSS class on first load */
+.page-enter {
+  animation: pageIn 0.4s ease-out;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth hover transitions for interactive elements */
+a, button:not(:disabled), [role="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* No transition on form inputs — avoids typing lag */
+input, textarea, select {
+  transition: none;
+}
+
+/* Button press effect — only on non-magnetic, non-disabled buttons */
+.btn-magnetic:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+button:not(.btn-magnetic):active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Smooth image loading */
+img {
+  transition: opacity 0.3s ease;
+}
+
+/* Mobile tap highlight color */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: hsl(var(--primary) / 0.15);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Prevent overscroll bounce on iOS */
+@supports (-webkit-touch-callout: none) {
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Mobile viewport height fix */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}

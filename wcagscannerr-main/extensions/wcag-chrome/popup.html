@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WCAG Scanner</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <h1>WCAG Scanner</h1>
+      <button id="scan-btn" class="primary">Scan page</button>
+    </div>
+    <p id="url-display" class="url"></p>
+  </header>
+
+  <main id="results" class="results hidden">
+    <div class="score-card">
+      <div class="score-num" id="score-num">–</div>
+      <div class="score-label" id="score-label">score</div>
+    </div>
+    <div class="impact-grid">
+      <div class="impact-tile critical"><span id="t-critical">0</span><label>Critical</label></div>
+      <div class="impact-tile serious"><span id="t-serious">0</span><label>Serious</label></div>
+      <div class="impact-tile moderate"><span id="t-moderate">0</span><label>Moderate</label></div>
+      <div class="impact-tile minor"><span id="t-minor">0</span><label>Minor</label></div>
+    </div>
+    <h2 class="section-h">Top violations</h2>
+    <ol id="violation-list"></ol>
+  </main>
+
+  <main id="placeholder" class="placeholder">
+    <p>Click <strong>Scan page</strong> to run axe-core against the active tab. Nothing leaves your browser — this is the same private run the web app performs server-side, just client-side.</p>
+  </main>
+
+  <main id="error-pane" class="error-pane hidden">
+    <h2>Couldn't run scan</h2>
+    <p id="error-msg"></p>
+  </main>
+
+  <footer class="cta hidden" id="cta">
+    <a id="cta-link" target="_blank" rel="noopener noreferrer">See full report →</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

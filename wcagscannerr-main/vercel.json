@@ -1,0 +1,41 @@
+{
+  "framework": "nextjs",
+  "functions": {
+    "app/api/scan/route.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+    },
+    "app/api/v1/scan/route.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+    },
+      "app/api/scan/multi/route.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+
+
+    },
+    "app/api/scan/batch/tick/route.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+    },
+    "app/api/cron/process-batch/route.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+    },
+    "app/api/cron/run-monitoring/route.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/process-batch",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/run-monitoring",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

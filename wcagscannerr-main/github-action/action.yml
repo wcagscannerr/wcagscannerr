@@ -1,0 +1,32 @@
+name: 'WCAG Scanner'
+description: 'Run a WCAG accessibility scan against a URL via wcagscannerr.com and fail the workflow when the score is below the configured threshold.'
+author: 'wcagscannerr'
+
+inputs:
+  api-key:
+    description: 'WCAG Scanner API key. Use ${{ secrets.WCAG_API_KEY }} in production workflows.'
+    required: true
+  url:
+    description: 'URL to scan (e.g. https://example.com).'
+    required: true
+  fail-threshold:
+    description: 'Score (0-100) below which the workflow should fail. Default 85.'
+    required: false
+    default: '85'
+  api-base-url:
+    description: 'Override the API base URL (only set this when using a non-production deployment).'
+    required: false
+    default: 'https://www.wcagscannerr.com'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run WCAG scan
+      shell: bash
+      env:
+        WCAG_API_KEY: ${{ inputs.api-key }}
+        WCAG_SCAN_URL: ${{ inputs.url }}
+        WCAG_FAIL_THRESHOLD: ${{ inputs.fail-threshold }}
+        WCAG_API_BASE_URL: ${{ inputs.api-base-url }}
+      run: |
+        node "$GITHUB_ACTION_PATH/run-scan.js"

@@ -1,0 +1,115 @@
+appId: com.wcagscanner.desktop
+productName: WCAG Scanner
+copyright: Copyright © 2025 WCAG Scanner
+
+# ──────────────────────────────────────────────
+# Directories
+# ──────────────────────────────────────────────
+directories:
+  output: release
+  buildResources: electron/build-resources
+
+# ──────────────────────────────────────────────
+# Files to include
+# ──────────────────────────────────────────────
+files:
+  - "out/**/*"           # Next.js static export
+  - "electron/dist/**/*"  # Compiled Electron main/preload
+  - "public/icon.*"      # App icon
+  - "package.json"
+
+# ──────────────────────────────────────────────
+# Extra resources (Chromium for scanning)
+# ──────────────────────────────────────────────
+# extraResources:
+#   - from: "electron/chromium"
+#     to: "chromium"
+#     filter:
+#       - "**/*"
+
+# ──────────────────────────────────────────────
+# Extra metadata
+# ──────────────────────────────────────────────
+extraMetadata:
+  main: "electron/dist/main.js"
+  version: "1.0.0"
+
+# ──────────────────────────────────────────────
+# Asar (package app code)
+# ──────────────────────────────────────────────
+asar: true
+asarUnpack:
+  - "electron/chromium/**/*"
+
+# ──────────────────────────────────────────────
+# Windows Configuration
+# ──────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: "public/icons/win/icon.ico"
+  artifactName: "${productName}-Setup-${version}.${ext}"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  installerIcon: "public/icon.ico"
+  uninstallerIcon: "public/icon.ico"
+  installerHeaderIcon: "public/icon.ico"
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "WCAG Scanner"
+  installerLanguages:
+    - 1033  # English
+  language: 1033
+
+# ──────────────────────────────────────────────
+# macOS Configuration
+# ──────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: "public/icons/mac/icon.icns"
+  category: "public.app-category.developer-tools"
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: "electron/build-resources/entitlements.mac.plist"
+  entitlementsInherit: "electron/build-resources/entitlements.mac.plist"
+  artifactName: "${productName}-${version}.${ext}"
+
+dmg:
+  sign: false
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: "/Applications"
+
+# ──────────────────────────────────────────────
+# Linux Configuration
+# ──────────────────────────────────────────────
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: "public/icon.png"
+  category: "Development"
+  artifactName: "${productName}-${version}.${ext}"
+
+# ──────────────────────────────────────────────
+# Publish (optional: GitHub Releases)
+# ──────────────────────────────────────────────
+publish:
+  provider: github
+  owner: freebuff
+  repo: wcagscannerr
+  releaseType: release

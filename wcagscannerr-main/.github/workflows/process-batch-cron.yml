@@ -1,0 +1,35 @@
+name: Process Batch Scan Queue
+
+# Runs every 5 minutes (GitHub Actions' actual minimum - anything more
+# frequent is silently never triggered, no error, it just won't fire).
+# This replaces relying on the browser tab being open to drive batch
+# scans forward (see /batch/[id] page), since that only works while
+# someone's actively watching. Real delays of 5-30+ minutes during
+# GitHub's peak load are normal and expected - this is a background
+# safety net, not a real-time guarantee.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}  # lets you trigger it manually from the Actions tab for testing
+
+jobs:
+  process-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the batch processing endpoint
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X GET "https://www.wcagscannerr.com/api/cron/process-batch" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          CODE=$(echo "$RESPONSE" | tail -n1)
+
+          echo "Response: $BODY"
+
+          if [ "$CODE" != "200" ]; then
+            echo "❌ Batch processing tick failed (HTTP $CODE)"
+            exit 1
+          fi
+
+          echo "✅ Batch queue ticked"

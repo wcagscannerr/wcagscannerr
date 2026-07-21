@@ -1,0 +1,52 @@
+{
+  "name": "WCAG Scanner — Accessibility Compliance Audits",
+  "id": "/",
+  "short_name": "WCAG Scanner",
+  "description": "Scan your website for WCAG and ADA compliance issues in seconds.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050507",
+  "theme_color": "#8b5cf6",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["developer-tools", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "New Scan",
+      "url": "/scanner",
+      "description": "Start a new accessibility scan"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your scan history and reports"
+    },
+    {
+      "name": "Contrast Checker",
+      "url": "/contrast-checker",
+      "description": "Check color contrast ratios"
+    }
+  ]
+}
