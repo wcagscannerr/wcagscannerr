@@ -42,20 +42,31 @@ Everything you need to set up, deploy, and maintain this project in a private re
 | `DODO_ENTERPRISE_PRODUCT_ID` | Dodo dashboard → Products → Enterprise | Enterprise plan product reference |
 | `DODO_ENTERPRISE_ANNUAL_PRODUCT_ID` | Dodo dashboard → Products → Enterprise (Annual) | Annual Enterprise plan |
 
+### GitHub Actions (Multi-page scanner — set as repo secrets)
+
+| Secret name | Value | Used by |
+|-------------|-------|---------|
+| `SUPABASE_URL` | Same as `NEXT_PUBLIC_SUPABASE_URL` | `multiscan-worker.mjs` connects to DB |
+| `SUPABASE_SERVICE_ROLE_KEY` | Same as supabase service role key | Worker has service-level DB access |
+| `CRON_SECRET` | Same as Vercel's `CRON_SECRET` | Worker authenticates callback to Vercel |
+| `NEXT_PUBLIC_APP_URL` | `https://www.wcagscannerr.com` | Callback URL for scan completion |
+
+### GitHub Actions (Vercel dispatches to your private repo)
+
+Set these in **Vercel** (not GitHub):
+
+| Variable | Value | Used by |
+|----------|-------|---------|
+| `GITHUB_PAT` | GitHub Personal Access Token with `repo` scope | `multiscan/route.ts` triggers workflow_dispatch |
+| `GITHUB_REPO_OWNER` | `wcagscanner` | Which GitHub org/user to dispatch to |
+| `GITHUB_REPO_NAME` | `wcagscanner` (your private repo name) | Which repo has the workflow file |
+
 ### Resend (for emails)
 
 | Variable | Where to get it | Used for |
 |----------|----------------|----------|
 | `RESEND_API_KEY` | [Resend dashboard](https://resend.com) → API Keys | Sending compliance reports, alerts |
 | `RESEND_AUDIENCE_ID` | Resend dashboard → Audience | Newsletter subscriber list |
-
-### GitHub Actions (for multi-page/batch scanning)
-
-| Variable | Where to get it | Used for |
-|----------|----------------|----------|
-| `SUPABASE_URL` | Same as `NEXT_PUBLIC_SUPABASE_URL` | Multi-page worker connects to DB |
-| `SUPABASE_SERVICE_ROLE_KEY` | Same as above | Worker has service-level DB access |
-| `NEXT_PUBLIC_APP_URL` | Your Vercel deployment URL (e.g. `https://wcagscannerr.com`) | Callback URL for scan completion |
 
 ### Vercel (deployment)
 
@@ -189,28 +200,85 @@ Vercel auto-deploys on push to `main`.
 
 ## 🤖 GitHub Actions (CI/CD)
 
-### Workflow Files
+### How GitHub Actions Works in This Project
 
-This project includes:
+There are **two separate systems** using GitHub Actions. Don't confuse them!
 
-1. **Multi-page scanner** — `scripts/multiscan-worker.mjs` runs on GH Actions runners (more RAM than Vercel)
-2. **GitHub Action for CI scans** — `github-action/action.yml` lets others run scans in their CI pipeline
+#### System A: The WCAG Scanner GitHub Action (`github-action/`)
 
-### Setup Secrets
+This is a **composite GitHub Action** (a reusable plugin). It lives in your **public repo** `wcagscanner/wcag-action`. Other people put this in their workflow file:
 
-1. Go to your repo → **Settings → Secrets and variables → Actions**
-2. Add these **Repository secrets**:
+```yaml
+- uses: wcagscanner/wcag-action@v1
+  with:
+    api-key: ${{ secrets.WCAG_API_KEY }}
+    url: https://example.com
+```
+
+It calls **your Vercel API** to run a scan. This is a **product** you sell to Enterprise customers for CI/CD integration.
+
+**Files involved:**
+- `github-action/action.yml` — defines inputs/outputs
+- `github-action/run-scan.js` — 70-line Node script that POSTs to `/api/v1/scan`
+- `github-action/README.md` — usage docs
+
+**No setup needed** — this is something your customers use, not you.
+
+#### System B: Multi-page Scanner Workflow (`.github/workflows/multiscan.yml`)
+
+This is an **internal workflow** in your private repo. When a user clicks "Multi-page scan" on your web app:
+
+```
+User clicks "Multi-scan"
+  → Vercel creates batch record in Supabase
+  → Vercel calls GitHub API to trigger workflow_dispatch
+  → GitHub Actions runner on YOUR private repo launches
+  → Runner executes scripts/multiscan-worker.mjs
+  → Worker uses Puppeteer (Chromium) to scan each page
+  → Worker saves results to Supabase
+  → Worker calls back to Vercel API when done
+```
+
+**Files involved:**
+- `.github/workflows/multiscan.yml` — defines the workflow (already created ✅)
+- `scripts/multiscan-worker.mjs` — the actual scanner script
+
+### Setting up GitHub Secrets for System B
+
+1. Go to your **private repo** (`wcagscanner/wcagscanner`) on GitHub
+2. Settings → Secrets and variables → Actions
+3. Add these **Repository secrets**:
 
 | Secret name | Value |
 |------------|-------|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (bypasses RLS) |
-| `CRON_SECRET` | Same as the env var above |
-| `NEXT_PUBLIC_APP_URL` | Your Vercel deployment URL |
+| `SUPABASE_URL` | Your Supabase project URL (same as `NEXT_PUBLIC_SUPABASE_URL`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key from Supabase |
+| `CRON_SECRET` | Generate with `openssl rand -hex 32` (must match Vercel's `CRON_SECRET`) |
+| `NEXT_PUBLIC_APP_URL` | `https://www.wcagscannerr.com` |
 
-### Example CI Workflow
+4. In **Vercel**, add these env vars:
 
-Create `.github/workflows/ci.yml`:
+| Variable | Value |
+|----------|-------|
+| `GITHUB_PAT` | GitHub Personal Access Token with `repo` scope |
+| `GITHUB_REPO_OWNER` | `wcagscanner` |
+| `GITHUB_REPO_NAME` | `wcagscanner` (your private repo name) |
+
+### Creating the GitHub Personal Access Token
+
+```bash
+# 1. Go to https://github.com/settings/tokens
+# 2. Click "Generate new token (classic)"
+# 3. Name it "WCAG Scanner Multiscan"
+# 4. Select scope: repo (full control of private repositories)
+# 5. Click "Generate token"
+# 6. Copy the token (it starts with ghp_...)
+# 7. Add it as GITHUB_PAT in Vercel env vars
+```
+
+### CI Workflow (Optional — for your development)
+
+Create `.github/workflows/ci.yml` in your private repo if you want automatic linting + build on push:
 
 ```yaml
 name: CI
@@ -222,78 +290,21 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-build:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Lint
-        run: npm run lint
-      
-      - name: Build
-        run: npm run build
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Add all other required env vars here...
-
-  # Optional: Run accessibility scan on staging
-  a11y-scan:
-    needs: lint-and-build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run WCAG scan on staging
-        uses: ./github-action
-        with:
-          api-key: ${{ secrets.WCAG_API_KEY }}
-          url: https://staging.example.com
-          fail-threshold: 85
-```
-
-### Multi-page Scanner Workflow
-
-Create `.github/workflows/multiscan.yml`:
-
-```yaml
-name: Multi-page Scan
-
-on:
-  workflow_dispatch:
-    inputs:
-      url:
-        description: 'URL to scan'
-        required: true
-      pages:
-        description: 'Number of pages to scan'
-        default: '10'
-
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Chromium
-        run: sudo apt-get update && sudo apt-get install -y chromium-browser
-      
-      - name: Run multi-page scan
-        run: node scripts/multiscan-worker.mjs
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
 ```
 
 ---
@@ -410,8 +421,12 @@ wcagscannerr/
 ├── types/                 # TypeScript types
 ├── supabase/
 │   └── migrations/        # Database migrations (apply in order)
-└── scripts/               # Utility scripts
-    └── multiscan-worker.mjs  # GH Actions multi-page scanner
+├── scripts/               # Utility scripts
+│   └── multiscan-worker.mjs  # GH Actions multi-page scanner
+└── github-action/         # Public WCAG Scanner GitHub Action
+    ├── action.yml
+    ├── run-scan.js
+    └── README.md
 ```
 
 ### Useful commands
@@ -496,6 +511,15 @@ npx supabase db push
 ```
 This deletes duplicate monthly_grant rows and prevents future duplicates.
 
+### "Enterprise plan showing 3 scans"
+
+**Fix:** This is caused by `ensureMonthlyGrant()` in `lib/scanner/credits.ts` — it only grants monthly credits if no grant exists yet. If you upgrade mid-cycle, the existing free grant (3 scans) blocks the enterprise grant (500 scans).
+
+**The fix** was applied in `lib/scanner/credits.ts` (changed to SUM-based top-ups). After deploying:
+1. Push migration 023: `npx supabase db push`
+2. This adds a top-up grant for your existing enterprise account
+3. After visiting the dashboard again, it should show 500 scans
+
 ### "Build fails with 'Cannot find module puppeteer-core'"
 
 **Fix:** The scanner was changed from `puppeteer-core` to `puppeteer`. If you add new scan files, import from `puppeteer`:
@@ -516,7 +540,15 @@ All migrations use `CREATE TABLE IF NOT EXISTS` and conditional DO blocks. If a 
 Check:
 1. Secrets are added to the repo (Settings → Secrets and variables → Actions)
 2. Workflow files are in `.github/workflows/`
-3. The workflow trigger condition is met (e.g., push to main, or manual trigger)
+3. The workflow trigger condition is met (e.g., workflow_dispatch for manual trigger)
+
+### "Multi-page scan creates batch but never scans"
+
+Check:
+1. `GITHUB_PAT` is set in Vercel with `repo` scope
+2. `GITHUB_REPO_OWNER` and `GITHUB_REPO_NAME` are correct
+3. `.github/workflows/multiscan.yml` exists in the target repo
+4. Vercel can reach `https://api.github.com/repos/...` (no firewall)
 
 ### "Cron jobs not running"
 
@@ -538,7 +570,8 @@ When setting up in a new private repo:
 - [ ] Create Dodo account + products + webhook
 - [ ] Add ALL env vars to Vercel
 - [ ] Deploy to Vercel (auto-deploy on push)
-- [ ] Add GitHub secrets for CI/CD
+- [ ] Add GitHub secrets for multi-page scanner
+- [ ] Create GitHub PAT for workflow dispatch
 - [ ] Test: `curl https://your-domain.com/api/scan-activity`
 - [ ] Test: Run a free scan
 - [ ] Create a test user and verify dashboard works
@@ -546,5 +579,5 @@ When setting up in a new private repo:
 
 ---
 
-> **Last updated:** July 21, 2026
+> **Last updated:** July 22, 2026
 > **Project:** WCAG Scanner — Automated accessibility auditing

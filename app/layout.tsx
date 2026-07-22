@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic';
 
 import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
-import InstallPrompt from '@/components/pwa/InstallPrompt';
 import CookieConsent from '@/components/cookies/CookieConsent';
 import './globals.css';
 
@@ -59,7 +58,6 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
         </ThemeProvider>
-        <InstallPrompt />
         <CookieConsent />
         <script
           dangerouslySetInnerHTML={{

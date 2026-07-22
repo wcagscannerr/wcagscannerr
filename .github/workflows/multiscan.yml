@@ -1,27 +1,96 @@
-name: Multi-page Scan
+# ================================================
+# Multi-Page Scanner Workflow
+#
+# Triggered by Vercel API (app/api/scan/multiscan/route.ts)
+# via workflow_dispatch. Runs on the private repo
+# (wcagscanner/wcagscanner) to scan multiple pages
+# of a website using Puppeteer + axe-core.
+#
+# WHY this exists outside Vercel:
+# - GitHub Actions runners have 7GB RAM vs Vercel's 1GB
+# - Can install Chromium without cold-start limits
+# - No 60-second Vercel Hobby timeout issues
+#
+# SETUP:
+# 1. Add these secrets in your repo Settings → Secrets and variables → Actions:
+#    SUPABASE_URL        = your Supabase project URL
+#    SUPABASE_SERVICE_ROLE_KEY = Supabase service_role key
+#    CRON_SECRET         = same as Vercel's CRON_SECRET
+#    NEXT_PUBLIC_APP_URL = https://www.wcagscannerr.com
+# ================================================
+
+name: Multi-Page Scanner
 
 on:
   workflow_dispatch:
     inputs:
-      url:
-        description: 'URL to scan'
+      batch_id:
+        description: 'Batch ID from Supabase'
         required: true
-      pages:
+        type: string
+      user_id:
+        description: 'User who triggered the scan'
+        required: true
+        type: string
+      base_url:
+        description: 'Base URL to scan'
+        required: true
+        type: string
+      page_count:
         description: 'Number of pages to scan'
-        default: '10'
+        required: true
+        type: string
+      wcag_version:
+        description: 'WCAG version (2.1 or 2.2)'
+        required: false
+        default: '2.1'
+        type: string
+      wcag_level:
+        description: 'WCAG level (A, AA, AAA)'
+        required: false
+        default: 'AA'
+        type: string
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+  NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://www.wcagscannerr.com' }}
 
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Install Chromium
-        run: sudo apt-get update && sudo apt-get install -y chromium-browser
-      
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-codecs-ffmpeg
+          if ! command -v chromium-browser &> /dev/null; then
+            echo "chromium-browser not found, trying alternative..."
+            sudo apt-get install -y chromium || true
+          fi
+          which chromium-browser || which chromium || echo "Will use puppeteer fallback"
+
       - name: Run multi-page scan
-        run: node scripts/multiscan-worker.mjs
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+        run: |
+          node scripts/multiscan-worker.mjs \
+            --batch-id=${{ github.event.inputs.batch_id }} \
+            --user-id=${{ github.event.inputs.user_id }} \
+            --base-url=${{ github.event.inputs.base_url }} \
+            --page-count=${{ github.event.inputs.page_count }} \
+            --wcag-version=${{ github.event.inputs.wcag_version }} \
+            --wcag-level=${{ github.event.inputs.wcag_level }}

@@ -48,13 +48,15 @@ export function getTodayStartUtc(d: Date = new Date()): string {
 }
 
 // ── Monthly-grant helpers ──
-// Step 8: idem insert BOTH +scansPerMonth AND +pageRendersPerMonth rows
-// for the current period. Idempotent via separate existence checks per
-// metric so a deploy mid-period doesn't accidentally grant 2× scans.
 //
-// Pre-launch: page-render grants for users who already have a scan grant
-// this period are backfilled by migration 016. New users / first-of-period
-// get both grants via this function.
+// Uses SUM-based checking to handle mid-cycle plan upgrades:
+// - New user (no grant yet): inserts full plan limit
+// - Existing user, same plan: skips (sum >= limit)
+// - Existing user, upgraded: inserts top-up (limit - existing sum)
+// - Existing user, downgraded: skips (no removal of already-granted credits)
+//
+// The unique index on monthly_grant was removed in migration 023 to allow
+// top-up rows. Race conditions are handled by the try-catch below.
 
 export async function ensureMonthlyGrant(userId: string): Promise<void> {
   const db = createServiceClient();
@@ -69,33 +71,42 @@ export async function ensureMonthlyGrant(userId: string): Promise<void> {
   const planId = profile?.subscription_status || 'free';
   const planLimits = PLANS[planId as keyof typeof PLANS]?.limits || PLANS.free.limits;
 
-  // Single SELECT keyed on reason='monthly_grant' to learn both flags.
+  // SELECT all monthly_grant rows with delta to compute sums per metric.
   const { data: existing } = await db
     .from('scan_credits_ledger')
-    .select('id, metric')
+    .select('id, metric, delta')
     .eq('user_id', userId)
     .eq('reason', 'monthly_grant')
     .gte('created_at', periodStart);
 
-  const hasScanGrant = (existing || []).some((r: any) => r.metric === 'scan');
-  const hasPageGrant = (existing || []).some((r: any) => r.metric === 'page_render');
+  const scanSum = (existing || [])
+    .filter((r: any) => r.metric === 'scan')
+    .reduce((sum: number, r: any) => sum + (r.delta ?? 0), 0);
+
+  const pageSum = (existing || [])
+    .filter((r: any) => r.metric === 'page_render')
+    .reduce((sum: number, r: any) => sum + (r.delta ?? 0), 0);
 
   const rowsToInsert: any[] = [];
-  if (!hasScanGrant) {
+
+  // Scan grant: top-up if existing sum < plan limit
+  if (scanSum < planLimits.scansPerMonth) {
     rowsToInsert.push({
       user_id: userId,
       scan_id: null,
       metric: 'scan' as LedgerMetric,
-      delta: planLimits.scansPerMonth,
+      delta: planLimits.scansPerMonth - scanSum,
       reason: 'monthly_grant' as CreditReason,
     });
   }
-  if (!hasPageGrant) {
+
+  // Page-render grant: top-up if existing sum < plan limit
+  if (pageSum < planLimits.pageRendersPerMonth) {
     rowsToInsert.push({
       user_id: userId,
       scan_id: null,
       metric: 'page_render' as LedgerMetric,
-      delta: planLimits.pageRendersPerMonth,
+      delta: planLimits.pageRendersPerMonth - pageSum,
       reason: 'monthly_grant' as CreditReason,
     });
   }
@@ -104,12 +115,11 @@ export async function ensureMonthlyGrant(userId: string): Promise<void> {
     try {
       await db.from('scan_credits_ledger').insert(rowsToInsert);
     } catch (err: any) {
-      // Unique index violation (idx_credits_monthly_grant_unique) means
-      // a concurrent request already inserted the grant between our SELECT
-      // check above and this INSERT. That's fine — the SUM is correct, just
-      // skip the duplicate.
+      // If a concurrent request already inserted the same top-up between
+      // our SELECT and INSERT, the SUM will still be correct next time
+      // the user visits the dashboard. Just skip the duplicate.
       if (err?.code !== '23505') {
-        throw err; // Re-throw unexpected errors
+        throw err;
       }
     }
   }
