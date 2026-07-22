@@ -66,7 +66,6 @@ export function generateNonce(): string {
   }
   // Node.js server-side — use dynamic import to avoid bundler issues
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { randomBytes } = eval('require("crypto")')
     return randomBytes(16).toString('base64')
   } catch {

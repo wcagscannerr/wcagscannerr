@@ -28,6 +28,17 @@ export function ScoreTrendChart({ history }: { history: HistoryPoint[] }) {
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
 
+  const xLabels = useMemo(() => {
+    if (data.length <= 2) return data.map((d, i) => ({ index: i, date: d.date }))
+    const maxLabels = 6
+    const step = Math.max(1, Math.floor((data.length - 1) / (maxLabels - 1)))
+    const indices = new Set<number>()
+    indices.add(0)
+    for (let i = step; i < data.length - 1; i += step) indices.add(i)
+    indices.add(data.length - 1)
+    return Array.from(indices).map(i => ({ index: i, date: data[i].date }))
+  }, [data])
+
   if (data.length === 0) {
     return (
       <div className="w-full flex flex-col items-center justify-center py-12 text-center" style={{ minHeight: height }}>
@@ -75,17 +86,6 @@ export function ScoreTrendChart({ history }: { history: HistoryPoint[] }) {
   const trendPercent = firstScore > 0 ? ((trend / firstScore) * 100).toFixed(1) : '0'
 
   const gridLines = [0, 25, 50, 75, 100]
-
-  const xLabels = useMemo(() => {
-    if (data.length <= 2) return data.map((d, i) => ({ index: i, date: d.date }))
-    const maxLabels = 6
-    const step = Math.max(1, Math.floor((data.length - 1) / (maxLabels - 1)))
-    const indices = new Set<number>()
-    indices.add(0)
-    for (let i = step; i < data.length - 1; i += step) indices.add(i)
-    indices.add(data.length - 1)
-    return Array.from(indices).map(i => ({ index: i, date: data[i].date }))
-  }, [data])
 
   return (
     <div className="w-full">
