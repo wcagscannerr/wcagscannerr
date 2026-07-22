@@ -43,5 +43,5 @@ jobs:
         uses: wcagscannerr/wcag-action@v1.0.0
         with:
           api-key: ${{ secrets.WCAG_API_KEY }}
-          url: https://staging.example.com
+          url:  https://www.wcagscannerr.com
           fail-threshold: 85
