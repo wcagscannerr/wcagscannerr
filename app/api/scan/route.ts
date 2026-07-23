@@ -258,10 +258,11 @@ export async function POST(request: NextRequest) {
       console.error('Failed to update scan:', updateError);
     }
 
+    let reportId: string | null = null;
     if (userId) {
       // Step 4: consume was already done AFTER the scan row insert and
       // BEFORE runScan — nothing to do here on success.
-      await db
+      const { data: report } = await db
         .from('reports')
         .insert({
           scan_id: scanId,
@@ -271,6 +272,7 @@ export async function POST(request: NextRequest) {
         })
         .select()
         .single();
+      reportId = report?.id || null;
     }
 
     // ── Insert ALL violations to DB (complete audit trail) ──
@@ -311,6 +313,31 @@ export async function POST(request: NextRequest) {
         } catch (statusErr) {
           console.warn('[SCAN] reconcileStatus failed (will retry on next scan):', statusErr);
         }
+      }
+    }
+
+    // ── Send email notification to user ──
+    if (userId && reportId) {
+      try {
+        const { data: profile } = await db
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        if (profile?.email) {
+          const { sendScanCompleteEmail } = await import('@/lib/email/resend');
+          await sendScanCompleteEmail(
+            profile.email,
+            url,
+            result.score,
+            result.totalViolations,
+            reportId,
+            process.env.NEXT_PUBLIC_APP_URL || 'https://wcagscannerr.com'
+          );
+        }
+      } catch (emailErr) {
+        console.error('[SCAN] Failed to send email:', emailErr);
       }
     }
 

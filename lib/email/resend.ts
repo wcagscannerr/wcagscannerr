@@ -22,8 +22,7 @@ export async function sendScanCompleteEmail(
             ${score}/100
           </h2>
           <p style="margin: 8px 0 0;">${violationCount} violations found</p>
-        </div>
-        <a href="${appUrl}/dashboard/reports/${reportId}" 
+        </div>          <a href="${appUrl}/reports/${reportId}" 
            style="background: #6C47FF; color: white; padding: 12px 24px; 
                   border-radius: 6px; text-decoration: none; display: inline-block;">
           View Full Report
