@@ -44,11 +44,9 @@ export async function GET(request: NextRequest) {
     for (const site of sites) {
       const lastScanned = site.last_scanned_at ? new Date(site.last_scanned_at) : new Date(0)
       const hoursSince = (now.getTime() - lastScanned.getTime()) / (1000 * 60 * 60)
-      const isDue = site.scan_frequency === 'daily'
-        ? hoursSince >= 24
-        : site.scan_frequency === 'weekly'
-          ? hoursSince >= 168
-          : hoursSince >= 720
+      const isDue = site.scan_frequency === 'weekly'
+        ? hoursSince >= 168
+        : hoursSince >= 720 // monthly
 
       if (!isDue) {
         skipCount++

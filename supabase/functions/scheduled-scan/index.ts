@@ -30,14 +30,14 @@ function getNextScanDate(frequency: string, lastScanned: string | null): Date {
 
   const last = new Date(lastScanned);
   switch (frequency) {
-    case 'daily':
-      last.setDate(last.getDate() + 1);
-      break;
     case 'weekly':
       last.setDate(last.getDate() + 7);
       break;
     case 'monthly':
       last.setMonth(last.getMonth() + 1);
+      break;
+    default:
+      last.setDate(last.getDate() + 7); // fallback to weekly
       break;
   }
   return last;

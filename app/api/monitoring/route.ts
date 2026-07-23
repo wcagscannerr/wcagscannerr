@@ -6,12 +6,8 @@ import { lookupSiteGeo } from '@/lib/monitoring/geoLookup';
 
 const createMonitorSchema = z.object({
   url: z.string().url(),
-  // Was missing 'daily' even though the frontend's dropdown offers it as
-  // the FIRST option, and the database/cron both fully support it. Picking
-  // "Daily" and submitting silently 400'd with a raw Zod error object
-  // dumped into a browser alert() — this is why "Add Site" looked broken
-  // for anyone who left the dropdown on its default option.
-  frequency: z.enum(['daily', 'weekly', 'monthly']).optional().default('weekly'),
+  // 'daily' was removed — scanning 25 pages daily via GH Actions is wasteful.
+  frequency: z.enum(['weekly', 'monthly']).optional().default('weekly'),
 });
 
 const toggleMonitorSchema = z.object({
