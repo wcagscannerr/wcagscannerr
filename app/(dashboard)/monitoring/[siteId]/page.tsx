@@ -70,73 +70,32 @@ export default async function SiteDashboardPage({
 
   if (siteError || !site) notFound()
 
-  // Fetch all completed scans for this site's URL (for history)
-  const { data: allScans } = await supabase
-    .from('scans')
-    .select('id, compliance_score, total_violations, critical_count, serious_count, moderate_count, minor_count, completed_at, pages_scanned')
-    .eq('url', site.url)
-    .eq('user_id', user.id)
-    .eq('status', 'completed')
-    .order('completed_at', { ascending: false })
-    .limit(20)
-
-  const scans = allScans || []
-  const latestScan = scans[0] || null
-
-  // Fetch violations for the latest scan
-  let latestViolations: any[] = []
-  if (latestScan) {
-    const { data: violations } = await supabase
-      .from('violations')
-      .select('rule_id, impact, rule_description, wcag_criterion, page_url')
-      .eq('scan_id', latestScan.id)
-      .order('impact', { ascending: false })
-      .limit(20)
-    latestViolations = violations || []
-  }
-
-  // Build trend data (last 7 data points)
-  const trend = scans.slice(0, 7).reverse().map(s => ({
-    date: s.completed_at ? new Date(s.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
-    score: s.compliance_score || 0,
-    violations: s.total_violations || 0,
-  }))
-
-  const avgScore = scans.length > 0
-    ? Math.round(scans.reduce((sum, s) => sum + (s.compliance_score || 0), 0) / scans.length)
-    : 0
-
-  // Latest scan's report
-  const { data: latestReport } = latestScan ? await supabase
-    .from('reports')
-    .select('id')
-    .eq('scan_id', latestScan.id)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle() : { data: null }
-
-  // ── Fetch per-page breakdown from latest batch ──
-  let batchPages: any[] = []
-  let batchName: string | null = null
-  let batchTotalUrls = 0
-  let batchCompletedUrls = 0
+  // ── Fetch batch-level aggregate data ──
+  // Use batch-level aggregates instead of individual page scans.
   let batchAvgScore = 0
   let batchTotalViolations = 0
   let batchTotalCritical = 0
+  let batchTotalSerious = 0
+  let batchCompletedUrls = 0
+  let batchTotalUrls = 0
+  let batchPages: any[] = []
+  let batchScanIds: string[] = []
+  let batchCompletedAt: string | null = null
 
   if (site.last_batch_id) {
+    // Fetch batch record
     const { data: batchRecord } = await supabase
       .from('batch_scans')
-      .select('id, name, total_urls, completed_urls, failed_urls')
+      .select('id, name, total_urls, completed_urls, failed_urls, completed_at')
       .eq('id', site.last_batch_id)
       .single()
 
     if (batchRecord) {
-      batchName = batchRecord.name
       batchTotalUrls = batchRecord.total_urls
       batchCompletedUrls = batchRecord.completed_urls
+      batchCompletedAt = batchRecord.completed_at
 
+      // Fetch all scans in this batch
       const { data: batchScans } = await supabase
         .from('scans')
         .select('id, url, compliance_score, total_violations, critical_count, serious_count, moderate_count, minor_count, status, completed_at, reports(id)')
@@ -148,14 +107,80 @@ export default async function SiteDashboardPage({
         ...s,
         reportId: s.reports?.[0]?.id || null,
       }))
+      batchScanIds = (batchScans || []).map((s: any) => s.id as string)
 
       if (completed.length > 0) {
         batchAvgScore = Math.round(completed.reduce((sum: number, s: any) => sum + (s.compliance_score || 0), 0) / completed.length)
         batchTotalViolations = completed.reduce((sum: number, s: any) => sum + (s.total_violations || 0), 0)
         batchTotalCritical = completed.reduce((sum: number, s: any) => sum + (s.critical_count || 0), 0)
+        batchTotalSerious = completed.reduce((sum: number, s: any) => sum + (s.serious_count || 0), 0)
       }
     }
   }
+
+  // ── Fall back to individual scan data when no batch exists ──
+  let fallbackScan: any = null
+  if (!site.last_batch_id) {
+    const { data: singleScans } = await supabase
+      .from('scans')
+      .select('id, compliance_score, total_violations, critical_count, serious_count, completed_at, pages_scanned')
+      .eq('url', site.url)
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    fallbackScan = singleScans?.[0] || null
+  }
+
+  const displayScore = batchAvgScore > 0 ? batchAvgScore : (fallbackScan?.compliance_score ?? null)
+  const displayViolations = batchTotalViolations > 0 ? batchTotalViolations : (fallbackScan?.total_violations ?? 0)
+  const displayCritical = batchTotalCritical > 0 ? batchTotalCritical : (fallbackScan?.critical_count ?? 0)
+  const displaySerious = batchTotalSerious > 0 ? batchTotalSerious : (fallbackScan?.serious_count ?? 0)
+  const displayPages = batchTotalUrls > 0 ? batchTotalUrls : (fallbackScan?.pages_scanned ?? 1)
+  const displayCompletedAt = batchCompletedAt || fallbackScan?.completed_at || null
+
+  // Fetch violations from ALL scans in the batch (or fall back to single scan)
+  let latestViolations: any[] = []
+  const violationScanIds = batchScanIds.length > 0 ? batchScanIds : (fallbackScan ? [fallbackScan.id] : [])
+  if (violationScanIds.length > 0) {
+    const { data: violations } = await supabase
+      .from('violations')
+      .select('rule_id, impact, rule_description, wcag_criterion, page_url')
+      .in('scan_id', violationScanIds)
+      .order('impact', { ascending: false })
+      .limit(30)
+    latestViolations = violations || []
+  }
+
+  // Build trend — show single batch average point
+  const trend = displayCompletedAt ? [{
+    date: new Date(displayCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    score: displayScore,
+    violations: displayViolations,
+  }] : []
+
+  const avgScore = typeof displayScore === 'number' ? displayScore : 0
+
+  // Latest scan's report (for the "View Latest Report" button)
+  const { data: latestReport } = batchScanIds.length > 0 
+    ? await supabase
+        .from('reports')
+        .select('id')
+        .in('scan_id', batchScanIds)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : fallbackScan
+      ? await supabase
+          .from('reports')
+          .select('id')
+          .eq('scan_id', fallbackScan.id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null }
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -210,8 +235,8 @@ export default async function SiteDashboardPage({
             </div>
           </div>
 
-          {/* Latest score ring */}
-          {latestScan && (
+          {/* Latest score ring — uses batch avg when available */}
+          {displayScore > 0 && (
             <div className="text-center shrink-0">
               <div className="relative w-20 h-20">
                 <svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
@@ -224,59 +249,59 @@ export default async function SiteDashboardPage({
                   <path
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
-                    stroke={scoreColor(latestScan.compliance_score || 0)}
+                    stroke={scoreColor(displayScore)}
                     strokeWidth="3"
-                    strokeDasharray={`${latestScan.compliance_score || 0}, 100`}
+                    strokeDasharray={`${displayScore}, 100`}
                     strokeLinecap="round"
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-xl font-bold" style={{ color: scoreColor(latestScan.compliance_score || 0) }}>
-                    {latestScan.compliance_score || '—'}
+                  <span className="text-xl font-bold" style={{ color: scoreColor(displayScore) }}>
+                    {displayScore}
                   </span>
                   <span className="text-[9px] text-muted-foreground">/100</span>
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">{scoreLabel(latestScan.compliance_score || 0)}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{scoreLabel(displayScore)}</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* ═══ Stats Grid ═══ */}
+      {/* ═══ Stats Grid (batch-level data) ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass-panel rounded-xl p-4 glow-border">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Avg Score</p>
           <p className="text-2xl font-bold mt-1" style={{ color: scoreColor(avgScore) }}>
             {avgScore || '—'}/100
           </p>
-          <p className="text-xs text-muted-foreground mt-1">{scans.length} scan{scans.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-muted-foreground mt-1">{batchCompletedUrls > 0 ? `Across ${batchCompletedUrls} pages` : 'Latest scan'}</p>
         </div>
         <div className="glass-panel rounded-xl p-4 glow-border">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total Issues</p>
           <p className="text-2xl font-bold text-foreground mt-1">
-            {latestScan?.total_violations ?? '—'}
+            {displayViolations || '—'}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {latestScan?.pages_scanned 
-              ? `Across ${latestScan.pages_scanned} page${latestScan.pages_scanned !== 1 ? 's' : ''}`
+            {displayPages > 1 
+              ? `Across ${displayPages} page${displayPages !== 1 ? 's' : ''}`
               : 'Latest scan'}
           </p>
         </div>
         <div className="glass-panel rounded-xl p-4 glow-border">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Critical</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#EF4444' }}>
-            {latestScan?.critical_count ?? 0}
+            {displayCritical || 0}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {latestScan?.serious_count ? `${latestScan.serious_count} serious` : '0 serious'}
+            {displaySerious ? `${displaySerious} serious` : '0 serious'}
           </p>
         </div>
         <div className="glass-panel rounded-xl p-4 glow-border">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Scans Run</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{scans.length}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Pages Scanned</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{batchTotalUrls || '—'}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {scans.filter(s => s.compliance_score >= 75).length} passed
+            {displayScore >= 75 ? 'Good score' : displayScore >= 50 ? 'Fair score' : 'Needs improvement'}
           </p>
         </div>
       </div>
@@ -419,7 +444,7 @@ export default async function SiteDashboardPage({
       </div>
 
       {/* ═══ Batch History (replaces old Scan History) ═══ */}
-      {!site.last_batch_id && scans.length === 0 && (
+      {!site.last_batch_id && !batchPages.length && (
         <div className="glass-panel rounded-2xl p-8 glow-border text-center">
           <BarChart3 className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No scans yet</p>
