@@ -29,6 +29,7 @@ interface MonitoredSite {
   last_scanned_at: string | null
   last_scan_id: string | null
   last_report_id: string | null
+  last_batch_id: string | null
   revoked_at: boolean
   created_at: string
   geo_lat: number | null
