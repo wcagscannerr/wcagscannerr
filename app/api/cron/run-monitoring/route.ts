@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data: sites, error: sitesError } = await db
       .from('monitored_sites')
-      .select('id, url, user_id, wcag_version, scan_frequency, last_scanned_at, profiles(email)')
+      .select('id, url, user_id, scan_frequency, last_scanned_at, profiles(email)')
       .eq('revoked_at', true) // NOTE: on this table, revoked_at is a boolean where TRUE means "monitoring active" — confusing name, but matches app/(dashboard)/monitoring/page.tsx's convention.
 
     if (sitesError) {
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       if (!isDue) continue
 
       try {
-        const scanResult = await runScan(site.url, site.wcag_version || '2.1')
+        const scanResult = await runScan(site.url, '2.1')
         const scanId = crypto.randomUUID()
 
         // Step 8: charge 1 page-render for the cron-driven render.
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
           moderate_count: scanResult.moderate,
           minor_count: scanResult.minor,
           wcag_level: 'AA',
-          wcag_version: site.wcag_version || '2.1',
+          wcag_version: '2.1',
           has_overlay_widget: scanResult.hasOverlayWidget,
           big_six: scanResult.bigSix,
           keyboard_issues: scanResult.keyboardIssues || [],
