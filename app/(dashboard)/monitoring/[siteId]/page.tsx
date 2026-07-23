@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Metadata } from 'next'
-import { ArrowLeft, ExternalLink, Globe, Clock, Activity, CheckCircle, Calendar, BarChart3, FileText } from 'lucide-react'
+import { ArrowLeft, Globe, Clock, Activity, CheckCircle, Calendar, BarChart3, FileText, Layers } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Site Dashboard | WCAG Scanner',
@@ -379,22 +379,22 @@ export default async function SiteDashboardPage({
       <div className="glass-panel rounded-2xl p-5 glow-border">
         <h3 className="text-sm font-semibold text-foreground mb-4">Actions</h3>
         <div className="flex flex-wrap gap-3">
+          {site.last_batch_id && (
+            <Link
+              href={`/batch/${site.last_batch_id}`}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity btn-magnetic shadow-lg shadow-primary/20"
+            >
+              <Layers className="w-4 h-4" />
+              Per-Page Breakdown
+            </Link>
+          )}
           {latestReport && (
             <Link
               href={`/reports/${latestReport.id}`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity btn-magnetic shadow-lg shadow-primary/20"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-sm text-foreground hover:bg-secondary/30 transition-all"
             >
               <FileText className="w-4 h-4" />
               View Latest Report
-            </Link>
-          )}
-          {site.last_scan_id && (
-            <Link
-              href={`/reports/${site.last_report_id || ''}`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-sm text-foreground hover:bg-secondary/30 transition-all"
-            >
-              <ExternalLink className="w-4 h-4" />
-              View Full Details
             </Link>
           )}
           <Link

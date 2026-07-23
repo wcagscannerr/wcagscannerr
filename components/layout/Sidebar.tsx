@@ -16,6 +16,7 @@ const navItems = [
   { href: '/scanner', label: 'Scanner', icon: ScanLine },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/monitoring', label: 'Monitoring', icon: Monitor },
+  { href: '/monitoring-reports', label: 'Monitoring Reports', icon: Monitor },
   { href: '/batch', label: 'Batch Scans', icon: Layers },
   { href: '/batch-reports', label: 'Batch Reports', icon: Layers },
   { href: '/vpat', label: 'VPAT Reports', icon: ShieldCheck, agencyOnly: true },

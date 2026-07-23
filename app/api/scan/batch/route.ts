@@ -19,6 +19,58 @@ import {
 } from '@/lib/scanner/credits';
 import { classifyFailure } from '@/lib/scanner/failure';
 
+// ── GET  /api/scan/batch?monitoring=true ──
+// Returns batch scans filtered by monitoring name prefix.
+export async function GET(request: NextRequest) {
+  const authClient = await createClient();
+  const db = createServiceClient();
+
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const monitoring = searchParams.get('monitoring') === 'true';
+
+  let query = db
+    .from('batch_scans')
+    .select('id, name, status, total_urls, completed_urls, failed_urls, created_at, completed_at, base_url')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (monitoring) {
+    // Filter to monitoring batches (named by monitoring-worker.mjs)
+    query = query.ilike('name', 'Monitoring scan of%');
+  }
+
+  const { data: batches, error: batchesError } = await query;
+
+  if (batchesError) {
+    return NextResponse.json({ error: batchesError.message }, { status: 500 });
+  }
+
+  // Fetch individual scans + reports for each batch
+  const batchIds = (batches || []).map(b => b.id);
+  const scansByBatch: Record<string, any[]> = {};
+
+  if (batchIds.length > 0) {
+    const { data: scans } = await db
+      .from('scans')
+      .select('id, url, compliance_score, total_violations, critical_count, serious_count, moderate_count, minor_count, status, created_at, batch_id, reports(id)')
+      .in('batch_id', batchIds)
+      .order('created_at', { ascending: true });
+
+    for (const scan of scans || []) {
+      if (!scan.batch_id) continue;
+      if (!scansByBatch[scan.batch_id]) scansByBatch[scan.batch_id] = [];
+      scansByBatch[scan.batch_id].push(scan);
+    }
+  }
+
+  return NextResponse.json({ batches, scansByBatch });
+}
+
 // Creates a batch of URLs to scan. This route does NOT run any browser
 // scans itself — it just validates and queues rows in `scans`
 // with status 'queued'. The actual scanning happens a few URLs at a time
