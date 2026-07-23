@@ -47,6 +47,13 @@ interface MonitoredSite {
     status: string
     completed_at: string
   } | null
+  batch_aggregate?: {
+    avgScore: number
+    totalViolations: number
+    criticalCount: number
+    seriousCount: number
+    completedAt: string | null
+  } | null
 }
 
 interface AlertItem {
@@ -396,26 +403,38 @@ export default function MonitoringPage() {
   const pausedSites = sites.filter(s => !s.revoked_at)
 
   const avgScore = useMemo(() => {
-    const scored = sites.filter(s => s.last_scan?.compliance_score != null)
+    const scored = sites.filter(s => {
+      const val = s.batch_aggregate?.avgScore ?? s.last_scan?.compliance_score
+      return val != null
+    })
     if (!scored.length) return 0
-    return Math.round(scored.reduce((sum, s) => sum + (s.last_scan?.compliance_score || 0), 0) / scored.length)
+    return Math.round(scored.reduce((sum, s) => {
+      const val = s.batch_aggregate?.avgScore ?? s.last_scan?.compliance_score ?? 0
+      return sum + val
+    }, 0) / scored.length)
   }, [sites])
 
   const totalViolations = useMemo(() =>
-    sites.reduce((sum, s) => sum + (s.last_scan?.total_violations || 0), 0),
+    sites.reduce((sum, s) => {
+      const v = s.batch_aggregate?.totalViolations ?? s.last_scan?.total_violations ?? 0
+      return sum + v
+    }, 0),
   [sites])
 
   const totalCritical = useMemo(() =>
-    sites.reduce((sum, s) => sum + (s.last_scan?.critical_count || 0), 0),
+    sites.reduce((sum, s) => {
+      const c = s.batch_aggregate?.criticalCount ?? s.last_scan?.critical_count ?? 0
+      return sum + c
+    }, 0),
   [sites])
 
   const violationBreakdown = useMemo(() => {
     const breakdown = { critical: 0, serious: 0, moderate: 0, minor: 0 }
     sites.forEach(s => {
-      breakdown.critical += s.last_scan?.critical_count || 0
-      breakdown.serious += s.last_scan?.serious_count || 0
-      breakdown.moderate += s.last_scan?.moderate_count || 0
-      breakdown.minor += s.last_scan?.minor_count || 0
+      breakdown.critical += s.batch_aggregate?.criticalCount ?? s.last_scan?.critical_count ?? 0
+      breakdown.serious += s.batch_aggregate?.seriousCount ?? s.last_scan?.serious_count ?? 0
+      breakdown.moderate += s.last_scan?.moderate_count ?? 0
+      breakdown.minor += s.last_scan?.minor_count ?? 0
     })
     return breakdown
   }, [sites])
@@ -852,7 +871,13 @@ export default function MonitoringPage() {
         >
           <AnimatePresence mode="popLayout">
             {filteredSites.map((site, index) => {
-              const score = site.last_scan?.compliance_score ?? null
+              // Use batch aggregate when available (multi-page monitoring scan),
+              // fall back to individual last_scan for legacy data.
+              const batch = site.batch_aggregate
+              const score = batch ? batch.avgScore : (site.last_scan?.compliance_score ?? null)
+              const totalViolations = batch ? batch.totalViolations : (site.last_scan?.total_violations ?? 0)
+              const criticalCount = batch ? batch.criticalCount : (site.last_scan?.critical_count ?? 0)
+              const seriousCount = batch ? batch.seriousCount : (site.last_scan?.serious_count ?? 0)
               const sColor = score !== null ? scoreColor(score) : '#6B7280'
               const isExpanded = expandedCard === site.id
 
@@ -954,11 +979,11 @@ export default function MonitoringPage() {
                               />
                             </div>
                             <div className="flex items-center gap-3 mt-2">
-                              {site.last_scan?.critical_count ? (
-                                <span className="text-[10px] text-red-400 font-medium">{site.last_scan.critical_count} critical</span>
+                              {criticalCount ? (
+                                <span className="text-[10px] text-red-400 font-medium">{criticalCount} critical</span>
                               ) : null}
-                              {site.last_scan?.serious_count ? (
-                                <span className="text-[10px] text-orange-400 font-medium">{site.last_scan.serious_count} serious</span>
+                              {seriousCount ? (
+                                <span className="text-[10px] text-orange-400 font-medium">{seriousCount} serious</span>
                               ) : null}
                             </div>
                           </div>
@@ -967,11 +992,11 @@ export default function MonitoringPage() {
                         {/* Mini Stats */}
                         <div className="grid grid-cols-3 gap-2 mb-3">
                           <div className="bg-secondary/30 rounded-lg p-2 text-center">
-                            <p className="text-lg font-bold text-foreground">{site.last_scan?.total_violations ?? '—'}</p>
+                            <p className="text-lg font-bold text-foreground">{totalViolations ?? '—'}</p>
                             <p className="text-[10px] text-muted-foreground">Issues</p>
                           </div>
                           <div className="bg-secondary/30 rounded-lg p-2 text-center">
-                            <p className="text-lg font-bold text-foreground">{site.last_scan?.critical_count ?? '—'}</p>
+                            <p className="text-lg font-bold text-foreground">{criticalCount ?? '—'}</p>
                             <p className="text-[10px] text-muted-foreground">Critical</p>
                           </div>
                           <div className="bg-secondary/30 rounded-lg p-2 text-center">
@@ -990,7 +1015,7 @@ export default function MonitoringPage() {
                         </button>
 
                         <AnimatePresence>
-                          {isExpanded && site.last_scan && (
+                          {isExpanded && (site.last_scan || site.batch_aggregate) && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
@@ -1004,15 +1029,15 @@ export default function MonitoringPage() {
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">Serious Issues</span>
-                                  <span className="text-orange-400 font-medium">{site.last_scan.serious_count}</span>
+                                  <span className="text-orange-400 font-medium">{seriousCount}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">Moderate Issues</span>
-                                  <span className="text-yellow-400 font-medium">{site.last_scan.moderate_count}</span>
+                                  <span className="text-yellow-400 font-medium">{site.last_scan?.moderate_count ?? 0}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">Minor Issues</span>
-                                  <span className="text-blue-400 font-medium">{site.last_scan.minor_count}</span>
+                                  <span className="text-blue-400 font-medium">{site.last_scan?.minor_count ?? 0}</span>
                                 </div>
                                 {site.last_batch_id && (
                                   <Link
@@ -1056,7 +1081,7 @@ export default function MonitoringPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Issues</p>
-                          <p className="text-sm font-medium text-foreground">{site.last_scan?.total_violations ?? '—'}</p>
+                          <p className="text-sm font-medium text-foreground">{totalViolations ?? '—'}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Last Scan</p>

@@ -24,13 +24,6 @@ function scoreLabel(score: number) {
   return 'Poor'
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
 function formatRelative(dateStr: string | null) {
   if (!dateStr) return 'Never'
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -122,6 +115,47 @@ export default async function SiteDashboardPage({
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle() : { data: null }
+
+  // ── Fetch per-page breakdown from latest batch ──
+  let batchPages: any[] = []
+  let batchName: string | null = null
+  let batchTotalUrls = 0
+  let batchCompletedUrls = 0
+  let batchAvgScore = 0
+  let batchTotalViolations = 0
+  let batchTotalCritical = 0
+
+  if (site.last_batch_id) {
+    const { data: batchRecord } = await supabase
+      .from('batch_scans')
+      .select('id, name, total_urls, completed_urls, failed_urls')
+      .eq('id', site.last_batch_id)
+      .single()
+
+    if (batchRecord) {
+      batchName = batchRecord.name
+      batchTotalUrls = batchRecord.total_urls
+      batchCompletedUrls = batchRecord.completed_urls
+
+      const { data: batchScans } = await supabase
+        .from('scans')
+        .select('id, url, compliance_score, total_violations, critical_count, serious_count, moderate_count, minor_count, status, completed_at, reports(id)')
+        .eq('batch_id', site.last_batch_id)
+        .order('queue_position', { ascending: true })
+
+      const completed = (batchScans || []).filter((s: any) => s.status === 'completed')
+      batchPages = (batchScans || []).map((s: any) => ({
+        ...s,
+        reportId: s.reports?.[0]?.id || null,
+      }))
+
+      if (completed.length > 0) {
+        batchAvgScore = Math.round(completed.reduce((sum: number, s: any) => sum + (s.compliance_score || 0), 0) / completed.length)
+        batchTotalViolations = completed.reduce((sum: number, s: any) => sum + (s.total_violations || 0), 0)
+        batchTotalCritical = completed.reduce((sum: number, s: any) => sum + (s.critical_count || 0), 0)
+      }
+    }
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -247,7 +281,65 @@ export default async function SiteDashboardPage({
         </div>
       </div>
 
-      {/* ═══ Score Trend + Violations Grid ═══ */}
+      {/* ═══ Per-Page Breakdown (replaces old Scan History) ═══ */}
+      {batchPages.length > 0 && (
+        <div className="glass-panel rounded-2xl overflow-hidden glow-border">
+          <div className="p-5 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  <span className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-primary" />
+                    Per-Page Breakdown
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {batchCompletedUrls}/{batchTotalUrls} pages · Avg {batchAvgScore}/100 · {batchTotalViolations} total violations
+                </p>
+              </div>
+              <Link
+                href={`/batch/${site.last_batch_id}`}
+                className="text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                Full Details →
+              </Link>
+            </div>
+          </div>
+          <div className="divide-y divide-border/50">
+            {batchPages.map((page: any) => {
+              const score = page.compliance_score ?? 0
+              const sColor = scoreColor(score)
+              return (
+                <Link
+                  key={page.id}
+                  href={page.reportId ? `/reports/${page.reportId}` : `/batch/${site.last_batch_id}`}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-secondary/10 transition-colors"
+                >
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="text-sm text-foreground truncate">{page.url}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {page.total_violations ?? 0} violations · {page.critical_count ?? 0} critical
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <p className="text-xs font-bold" style={{ color: sColor }}>
+                        {score}/100
+                      </p>
+                    </div>
+                    {page.status === 'completed' ? (
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: score >= 75 ? '#22D3A0' : score >= 50 ? '#F59E0B' : '#EF4444' }} />
+                    ) : page.status === 'failed' ? (
+                      <span className="text-[10px] text-red-400">Failed</span>
+                    ) : null}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Score trend */}
         <div className="glass-panel rounded-2xl p-5 glow-border">
@@ -326,54 +418,14 @@ export default async function SiteDashboardPage({
         </div>
       </div>
 
-      {/* ═══ Scan History ═══ */}
-      <div className="glass-panel rounded-2xl p-5 glow-border">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Scan History</h3>
-        {scans.length > 0 ? (
-          <div className="space-y-2">
-            {scans.map((scan, i) => {
-              const sColor = scoreColor(scan.compliance_score || 0)
-              return (
-                <div key={scan.id} className="flex items-center gap-4 p-3 rounded-xl bg-secondary/10 border border-border/50 hover:bg-secondary/20 transition-colors">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: sColor + '15' }}>
-                    <span className="text-sm font-bold" style={{ color: sColor }}>{scan.compliance_score || '—'}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-foreground font-medium">
-                      {scan.completed_at ? formatDate(scan.completed_at) : 'Unknown date'}
-                      {scan.pages_scanned && scan.pages_scanned > 1 && (
-                        <span className="text-muted-foreground font-normal ml-2">
-                          · {scan.pages_scanned} pages
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {scan.total_violations} violations · {scan.critical_count} critical · {scan.serious_count} serious
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {i === 0 && latestReport && (
-                      <Link
-                        href={`/reports/${latestReport.id}`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-medium hover:bg-primary/20 transition-colors"
-                      >
-                        <FileText className="w-3 h-3" />
-                        Latest Report
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <BarChart3 className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No scans yet</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Waiting for the next scheduled scan.</p>
-          </div>
-        )}
-      </div>
+      {/* ═══ Batch History (replaces old Scan History) ═══ */}
+      {!site.last_batch_id && scans.length === 0 && (
+        <div className="glass-panel rounded-2xl p-8 glow-border text-center">
+          <BarChart3 className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No scans yet</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">Waiting for the next scheduled scan.</p>
+        </div>
+      )}
 
       {/* ═══ Actions ═══ */}
       <div className="glass-panel rounded-2xl p-5 glow-border">

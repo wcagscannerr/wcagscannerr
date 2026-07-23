@@ -31,7 +31,7 @@ export async function GET() {
     const { data: sites, error } = await supabase
       .from('monitored_sites')
       .select(`
-        id, url, label, scan_frequency, last_scanned_at, last_scan_id, last_report_id,
+        id, url, label, scan_frequency, last_scanned_at, last_scan_id, last_report_id, last_batch_id,
         revoked_at, created_at,
         geo_lat, geo_lng, geo_country, geo_city, geo_looked_up_at,
         last_scan:scans!monitored_sites_last_scan_id_fkey (
@@ -114,7 +114,58 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ sites: sites || [], trend });
+    // ── Batch-level aggregates ──
+    // Fetch scans from each site's last_batch to compute accurate
+    // average score + total violations across ALL pages in the batch.
+    const batchIds = (sites || [])
+      .map(s => (s as any).last_batch_id)
+      .filter(Boolean) as string[];
+
+    let batchAggregates: Record<string, { avgScore: number; totalViolations: number; criticalCount: number; seriousCount: number; completedAt: string | null }> = {};
+
+    if (batchIds.length > 0) {
+      const { data: batchScans } = await supabase
+        .from('scans')
+        .select('batch_id, compliance_score, total_violations, critical_count, serious_count, status, completed_at')
+        .in('batch_id', batchIds);
+
+      const scansByBatch: Record<string, any[]> = {};
+      for (const s of batchScans || []) {
+        if (!scansByBatch[s.batch_id]) scansByBatch[s.batch_id] = [];
+        scansByBatch[s.batch_id].push(s);
+      }
+
+      for (const [batchId, scans] of Object.entries(scansByBatch)) {
+        const completed = scans.filter((s: any) => s.status === 'completed');
+        const avgScore = completed.length > 0
+          ? Math.round(completed.reduce((sum: number, s: any) => sum + (s.compliance_score || 0), 0) / completed.length)
+          : 0;
+        const totalViolations = completed.reduce((sum: number, s: any) => sum + (s.total_violations || 0), 0);
+        const criticalCount = completed.reduce((sum: number, s: any) => sum + (s.critical_count || 0), 0);
+        const seriousCount = completed.reduce((sum: number, s: any) => sum + (s.serious_count || 0), 0);
+        const latestCompleted = completed.length > 0
+          ? completed.reduce((latest: any, s: any) => !latest || (s.completed_at > latest.completed_at) ? s : latest)
+          : null;
+        batchAggregates[batchId] = {
+          avgScore,
+          totalViolations,
+          criticalCount,
+          seriousCount,
+          completedAt: latestCompleted?.completed_at || null,
+        };
+      }
+    }
+
+    // Attach batch aggregates to each site
+    const sitesWithBatch = (sites || []).map((site: any) => {
+      const batchAgg = site.last_batch_id ? batchAggregates[site.last_batch_id] : null;
+      return {
+        ...site,
+        batch_aggregate: batchAgg || null,
+      };
+    });
+
+    return NextResponse.json({ sites: sitesWithBatch, trend });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Server error' }, { status: 500 });
   }
