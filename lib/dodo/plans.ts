@@ -93,9 +93,9 @@ export const PLANS: Record<string, Plan> = {
     dodoAnnualProductId: process.env.DODO_GROWTH_ANNUAL_PRODUCT_ID!,
     limits: {
       scansPerMonth: 250,
-      pageRendersPerMonth: 600, // Step 8 — Growth: 600 renders/mo headroom over (10×25) max multiscan budget.
-      pagesPerScan: 25,
-      multiscanPageCap: 25,
+      pageRendersPerMonth: 600, // Step 8 — Growth: 600 renders/mo headroom over (10×15) max multiscan budget.
+      pagesPerScan: 15,
+      multiscanPageCap: 15,
       monitoredSites: 15,
       seats: 5,
       historyDays: 90,
@@ -109,7 +109,7 @@ export const PLANS: Record<string, Plan> = {
     features: [
       '250 scans per month',
       '600 page renders per month',
-      'Multi-page scan (up to 25 pages)',
+      'Multi-page scan (up to 15 pages)',
       'Multi-site agency dashboard',
       'White-labeled PDF reports',
       'Monitor 15 sites',
@@ -131,8 +131,8 @@ export const PLANS: Record<string, Plan> = {
     limits: {
       scansPerMonth: 500,
       pageRendersPerMonth: 2500, // Step 8 — Enterprise: monthly allotment before metered overage (Phase 2).
-      pagesPerScan: 50,
-      multiscanPageCap: 50,
+      pagesPerScan: 15,
+      multiscanPageCap: 15,
       monitoredSites: 25,
       seats: 'unlimited',
       historyDays: 365,
@@ -149,7 +149,7 @@ export const PLANS: Record<string, Plan> = {
     features: [
       '500 scans per month',
       '2,500 page renders per month (metered overage beyond)',
-      'Multi-page scan (up to 50 pages)',
+      'Multi-page scan (up to 15 pages)',
       'Multi-site agency dashboard',
       'White-labeled PDF reports',
       'Monitor 25 sites',

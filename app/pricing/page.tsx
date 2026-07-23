@@ -290,7 +290,7 @@ export default function PricingPage() {
                     {[
                       ['Monthly scans', '75', '250', '500'],
                       ['Page renders/mo', '120', '600', '2,500'],
-                      ['Multi-page scan cap', '15 pages', '25 pages', '50 pages'],
+                      ['Multi-page scan cap', '15 pages', '15 pages', '15 pages'],
                       ['Monitored sites', '5', '15', '25'],
                       ['Seats', '1', '5', 'Unlimited'],
                       ['Scan history', '30 days', '90 days', '1 year'],

@@ -55,7 +55,7 @@ const plans: PlanTile[] = [
     features: [
       '250 scans per month',
       '600 page renders per month',
-      'Multi-page scan (up to 25 pages)',
+      'Multi-page scan (up to 15 pages)',
       'Multi-site agency dashboard',
       'White-labeled PDF reports',
       'Monitor 15 sites',
@@ -78,7 +78,7 @@ const plans: PlanTile[] = [
     features: [
       '500 scans per month',
       '2,500 page renders per month (metered overage beyond)',
-      'Multi-page scan (up to 50 pages)',
+      'Multi-page scan (up to 15 pages)',
       'Multi-site agency dashboard',
       'White-labeled PDF reports',
       'Monitor 25 sites',
