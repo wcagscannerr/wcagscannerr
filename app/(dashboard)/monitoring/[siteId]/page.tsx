@@ -369,7 +369,7 @@ export default async function SiteDashboardPage({
         {/* Score trend */}
         <div className="glass-panel rounded-2xl p-5 glow-border">
           <h3 className="text-sm font-semibold text-foreground mb-4">Score Trend</h3>
-          {trend.length > 1 ? (
+          {trend.length >= 1 ? (
             <div className="space-y-2">
               {trend.map((point, i) => (
                 <div key={i} className="flex items-center gap-3">
