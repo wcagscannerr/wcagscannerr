@@ -1,0 +1,84 @@
+# ================================================
+# Monitoring Site Scanner Workflow
+#
+# Triggered by Vercel cron (app/api/cron/run-monitoring/route.ts)
+# via workflow_dispatch. Runs on the private repo to scan
+# an entire monitored website (up to 25 pages) using
+# Puppeteer + axe-core.
+#
+# WHY this exists outside Vercel:
+# - GitHub Actions runners have more RAM and no timeout limits
+# - Can install Chromium and scan 25+ pages without cold starts
+# - Vercel cron (5 min limit) just triggers the workflow and returns
+#
+# SETUP:
+# 1. Add these secrets in your repo Settings → Secrets → Actions:
+#    SUPABASE_URL
+#    SUPABASE_SERVICE_ROLE_KEY
+#    CRON_SECRET
+#    NEXT_PUBLIC_APP_URL
+# 2. Ensure GITHUB_REPO_OWNER and GITHUB_REPO_NAME are set in Vercel
+# ================================================
+
+name: Monitoring Site Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_id:
+        description: 'Monitored site ID in Supabase'
+        required: true
+        type: string
+      user_id:
+        description: 'User who owns this site'
+        required: true
+        type: string
+      base_url:
+        description: 'Base URL of the site to scan'
+        required: true
+        type: string
+      max_pages:
+        description: 'Maximum pages to scan (up to 25)'
+        required: false
+        default: '25'
+        type: string
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+  NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://www.wcagscannerr.com' }}
+
+jobs:
+  scan-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-codecs-ffmpeg
+          if ! command -v chromium-browser &> /dev/null; then
+            sudo apt-get install -y chromium || true
+          fi
+
+      - name: Run monitoring scan
+        run: |
+          node scripts/monitoring-worker.mjs \
+            --site-id=${{ github.event.inputs.site_id }} \
+            --user-id=${{ github.event.inputs.user_id }} \
+            --base-url=${{ github.event.inputs.base_url }} \
+            --max-pages=${{ github.event.inputs.max_pages }}
