@@ -41,21 +41,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ScanLine className="w-5 h-5 text-primary" />
             <span className="text-foreground font-semibold text-sm">WCAG Scanner</span>
           </div>
-          <AlertDropdown />
         </div>
 
-          {/* Desktop header */}
-          <div className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-[hsl(var(--surface-elevated))]/60 backdrop-blur-xl shrink-0">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <ScanLine className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-sm font-semibold text-foreground">WCAG Scanner</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <AlertDropdown />
+        {/* Desktop header */}
+        <div className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-[hsl(var(--surface-elevated))]/60 backdrop-blur-xl shrink-0">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <ScanLine className="w-4 h-4 text-primary" />
             </div>
-          </div>
+            <span className="text-sm font-semibold text-foreground">WCAG Scanner</span>
+          </Link>
+        </div>
+
+        {/* Single AlertDropdown for both mobile & desktop */}
+        <div className="fixed top-3 right-4 md:top-4 md:right-8 z-[9999]">
+          <AlertDropdown />
+        </div>
 
         <main className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="p-4 md:p-8 max-w-7xl mx-auto">
