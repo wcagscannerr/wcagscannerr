@@ -3,23 +3,23 @@
 /**
  * Monitoring Site Scanner
  *
- * Runs on GitHub Actions to scan an entire monitored website (up to 25 pages).
- * Discovers internal links, scans each page with axe-core via Puppeteer,
- * aggregates results into a single scan record + violations, then calls
- * back to Vercel for email notification.
+ * Scans an entire monitored website (up to 25 pages), creates a batch
+ * record with individual scans per page — so reports appear in
+ * batch_reports with full per-page breakdowns.
  *
  * Flow:
  * 1. Parse args (site_id, user_id, base_url, max_pages)
- * 2. Discover same-origin internal links from base_url
- * 3. Scan each page with Puppeteer + axe-core
- * 4. Aggregate violations/scores across all pages
- * 5. Create scan record + violations + report in Supabase
- * 6. Update monitored_sites with latest scan info
- * 7. Call back to Vercel to send email notification
+ * 2. Create batch_scans record
+ * 3. Discover same-origin internal links
+ * 4. For each page: scan with Puppeteer+axe-core, create scan+violations+report
+ * 5. Update batch progress
+ * 6. Update monitored_sites
+ * 7. Send callback for email notification
  */
 
 import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 // ── Parse CLI args ──
 const args = process.argv.slice(2).reduce((acc, arg) => {
@@ -42,7 +42,7 @@ if (!siteId || !userId || !baseUrl) {
   process.exit(1);
 }
 
-console.log('=== Monitoring Site Scanner ===');
+console.log('=== Monitoring Site Scanner (Batch Mode) ===');
 console.log(`Site ID: ${siteId}`);
 console.log(`User ID: ${userId}`);
 console.log(`Base URL: ${baseUrl}`);
@@ -57,7 +57,7 @@ const supabase = createClient(
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.wcagscannerr.com';
 const CRON_SECRET = process.env.CRON_SECRET;
 
-// ── WCAG tag → criterion mapping (mirrors lib/vpat/wcagMapping.ts) ──
+// ── WCAG tag → criterion mapping ──
 const WCAG_TAG_TO_CRITERION = {
   wcag111: '1.1.1', wcag121: '1.2.1', wcag122: '1.2.2', wcag123: '1.2.3',
   wcag124: '1.2.4', wcag125: '1.2.5', wcag131: '1.3.1', wcag132: '1.3.2',
@@ -93,13 +93,9 @@ function mapWcagTag(tags) {
   return 'N/A';
 }
 
-// ── Chromium path helper ──
+// ── Chromium path ──
 async function getChromiumPath() {
-  const paths = [
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-    '/snap/bin/chromium',
-  ];
+  const paths = ['/usr/bin/chromium-browser', '/usr/bin/chromium', '/snap/bin/chromium'];
   const { existsSync } = await import('fs');
   for (const p of paths) {
     if (existsSync(p)) return p;
@@ -135,7 +131,6 @@ async function discoverLinks(page, origin, maxLinks) {
       return results;
     }, origin, maxLinks + 10);
 
-    // Deduplicate and ensure base URL is first
     const basePath = new URL(page.url()).origin + new URL(page.url()).pathname.replace(/\/$/, '');
     const filtered = links.filter(l => l !== basePath);
     return [basePath, ...filtered].slice(0, maxLinks);
@@ -145,13 +140,12 @@ async function discoverLinks(page, origin, maxLinks) {
   }
 }
 
-// ── Run axe-core on a page ──
+// ── Run axe-core ──
 async function runAxeScan(page) {
   await page.addScriptTag({
     url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.3/axe.min.js',
   });
   await page.waitForFunction('typeof window.axe !== "undefined"', { timeout: 10000 });
-
   const runTags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'];
 
   return await page.evaluate((tags) => {
@@ -162,17 +156,12 @@ async function runAxeScan(page) {
           if (err) return resolve({ violations: [], passes: 0 });
           resolve({
             violations: results.violations.map(v => ({
-              id: v.id,
-              impact: v.impact || 'minor',
-              description: v.description,
-              help: v.help,
-              helpUrl: v.helpUrl,
-              tags: v.tags,
+              id: v.id, impact: v.impact || 'minor', description: v.description,
+              help: v.help, helpUrl: v.helpUrl, tags: v.tags,
               nodeCount: v.nodes.length,
               nodes: v.nodes.slice(0, 10).map(n => ({
                 html: (n.html || '').substring(0, 300),
-                target: n.target,
-                failureSummary: n.failureSummary || '',
+                target: n.target, failureSummary: n.failureSummary || '',
               })),
             })),
             passes: results.passes.length,
@@ -189,14 +178,12 @@ async function scanPage(browser, url) {
   try {
     await page.setViewport({ width: 1280, height: 720 });
     await page.setBypassCSP(true);
-
     try {
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 25000 });
     } catch {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
       await new Promise(r => setTimeout(r, 2000));
     }
-
     await new Promise(r => setTimeout(r, 1000));
     const axeResults = await runAxeScan(page);
 
@@ -210,39 +197,21 @@ async function scanPage(browser, url) {
     }
 
     const failPoints =
-      Math.min(critical, 50) * 10 +
-      Math.min(serious, 80) * 6 +
-      Math.min(moderate, 100) * 3 +
-      Math.min(minor, 200) * 1;
+      Math.min(critical, 50) * 10 + Math.min(serious, 80) * 6 +
+      Math.min(moderate, 100) * 3 + Math.min(minor, 200) * 1;
     const passPoints = axeResults.passes * 2;
     const totalPoints = passPoints + failPoints + 100;
     const score = Math.round(((passPoints + 100) / totalPoints) * 100);
 
     return {
-      url,
-      score: Math.max(18, Math.min(100, score)),
-      violations: axeResults.violations,
+      url, score: Math.max(18, Math.min(100, score)),
+      violations: axeResults.violations, passes: axeResults.passes,
       critical, serious, moderate, minor,
       totalViolations: critical + serious + moderate + minor,
     };
   } finally {
     await page.close();
   }
-}
-
-// ── Compute Big Six as flat object (matches lib/scanner/engine.ts format) ──
-function computeBigSix(allViolations) {
-  const counts = { contrast: 0, alt_text: 0, labels: 0, links: 0, buttons: 0, lang: 0 };
-  for (const v of allViolations) {
-    const id = v.id || '';
-    if (id.includes('color-contrast') || id.includes('contrast')) counts.contrast += Math.max(1, v.nodeCount || 1);
-    else if (id.includes('alt-text') || id.includes('image-alt')) counts.alt_text += Math.max(1, v.nodeCount || 1);
-    else if (id.includes('label') || id.includes('name')) counts.labels += Math.max(1, v.nodeCount || 1);
-    else if (id.includes('link-name') || id.includes('link-in-text')) counts.links += Math.max(1, v.nodeCount || 1);
-    else if (id.includes('button') || id.includes('aria')) counts.buttons += Math.max(1, v.nodeCount || 1);
-    else if (id.includes('lang') || id.includes('html-has-lang')) counts.lang += Math.max(1, v.nodeCount || 1);
-  }
-  return counts;
 }
 
 // ── Main ──
@@ -253,8 +222,7 @@ async function main() {
     console.log(`Using Chromium: ${chromiumPath}`);
 
     browser = await puppeteer.launch({
-      executablePath: chromiumPath,
-      headless: true,
+      executablePath: chromiumPath, headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     });
 
@@ -274,179 +242,205 @@ async function main() {
     const origin = new URL(baseUrl).origin;
     const urls = await discoverLinks(discoveryPage, origin, maxPages);
     await discoveryPage.close();
-
     console.log(`Found ${urls.length} pages to scan`);
 
-    // ── Step 2: Scan each page ──
-    const allViolations = [];
-    let totalCritical = 0, totalSerious = 0, totalModerate = 0, totalMinor = 0;
+    // ── Step 2: Create batch record ──
+    const batchId = crypto.randomUUID();
+    const { error: batchError } = await supabase.from('batch_scans').insert({
+      id: batchId,
+      user_id: userId,
+      name: `Monitoring scan of ${baseUrl} - ${new Date().toLocaleDateString()}`,
+      status: 'running',
+      total_urls: urls.length,
+      completed_urls: 0,
+      failed_urls: 0,
+      wcag_level: 'AA',
+      wcag_version: '2.1',
+      scan_type: 'batch',
+      base_url: baseUrl,
+    });
+
+    if (batchError) {
+      console.error('Failed to create batch record:', batchError);
+      throw batchError;
+    }
+    console.log(`Created batch: ${batchId}`);
+
+    // ── Step 3: Scan each page ──
     let pagesCompleted = 0, pagesFailed = 0;
-    const perPageResults = [];
 
     for (let i = 0; i < urls.length; i++) {
       console.log(`[${i + 1}/${urls.length}] Scanning: ${urls[i]}`);
+
+      // Create individual scan record
+      const scanId = crypto.randomUUID();
+      const { error: scanInsertError } = await supabase.from('scans').insert({
+        id: scanId,
+        batch_id: batchId,
+        user_id: userId,
+        url: urls[i],
+        status: 'running',
+        queue_position: i,
+        pages_requested: 1,
+        wcag_level: 'AA',
+        wcag_version: '2.1',
+        started_at: new Date().toISOString(),
+      });
+
+      if (scanInsertError) {
+        console.error(`Failed to create scan for ${urls[i]}:`, scanInsertError);
+        pagesFailed++;
+        continue;
+      }
+
       try {
         const result = await scanPage(browser, urls[i]);
-        allViolations.push(...result.violations.map(v => ({ ...v, page_url: urls[i] })));
-        totalCritical += result.critical;
-        totalSerious += result.serious;
-        totalModerate += result.moderate;
-        totalMinor += result.minor;
+
+        // Update scan with results
+        const { error: scanUpdateError } = await supabase.from('scans').update({
+          status: 'completed',
+          compliance_score: result.score,
+          total_violations: result.totalViolations,
+          critical_count: result.critical,
+          serious_count: result.serious,
+          moderate_count: result.moderate,
+          minor_count: result.minor,
+          pages_scanned: 1,
+          completed_at: new Date().toISOString(),
+          keyboard_issues: [],
+          viewport_breakdown: [],
+          has_overlay_widget: false,
+        }).eq('id', scanId);
+
+        if (scanUpdateError) {
+          console.error(`Failed to update scan ${scanId}:`, scanUpdateError);
+          pagesFailed++;
+          continue;
+        }
+
+        // Insert violations
+        if (result.violations.length > 0) {
+          const violationsToInsert = result.violations.map((v, vi) => ({
+            scan_id: scanId,
+            rule_id: v.id,
+            rule_description: (v.description || v.help || '').slice(0, 500),
+            impact: v.impact,
+            wcag_criterion: mapWcagTag(v.tags),
+            wcag_level: 'AA',
+            page_url: urls[i],
+            element_html: v.nodes?.[0]?.html?.slice(0, 1000) || '',
+            element_selector: v.nodes?.[0]?.target?.join(' ')?.slice(0, 500) || '',
+            node_count: v.nodeCount || 1,
+            tags: v.tags || [],
+            fix_summary: (v.help || '').slice(0, 500),
+            fix_detail: (v.description || '').slice(0, 2000),
+            help_url: v.helpUrl || '',
+            sort_order: vi,
+          }));
+
+          const { error: viError } = await supabase.from('violations').insert(violationsToInsert);
+          if (viError) console.error(`Failed to insert violations for ${scanId}:`, viError);
+        }
+
+        // Create report
+        await supabase.from('reports').insert({
+          scan_id: scanId,
+          user_id: userId,
+          name: `Monitoring: ${urls[i]} - ${new Date().toLocaleDateString()}`,
+          is_public: false,
+        });
+
         pagesCompleted++;
-        perPageResults.push({ url: urls[i], score: result.score, status: 'ok' });
         console.log(`  ✓ Score: ${result.score}, Violations: ${result.totalViolations}`);
+
       } catch (err) {
+        console.error(`  ✗ Failed: ${urls[i]} - ${err.message}`);
+        await supabase.from('scans').update({
+          status: 'failed',
+          error_message: err.message?.slice(0, 500) || 'Scan failed',
+          completed_at: new Date().toISOString(),
+        }).eq('id', scanId);
         pagesFailed++;
-        perPageResults.push({ url: urls[i], status: 'failed', error: err.message });
-        console.error(`  ✗ Failed: ${err.message}`);
       }
+
+      // Update batch progress
+      const { data: currentBatch } = await supabase
+        .from('batch_scans')
+        .select('completed_urls, failed_urls')
+        .eq('id', batchId)
+        .single();
+
+      const newCompleted = (currentBatch?.completed_urls || 0) + 1;
+      const newFailed = (currentBatch?.failed_urls || 0) + (pagesFailed > 0 ? 1 : 0);
+      const allDone = newCompleted + newFailed >= urls.length;
+
+      await supabase.from('batch_scans').update({
+        completed_urls: pagesCompleted,
+        failed_urls: pagesFailed,
+        status: allDone ? (pagesFailed === urls.length ? 'failed' : pagesFailed > 0 ? 'partial' : 'completed') : 'running',
+        completed_at: allDone ? new Date().toISOString() : null,
+      }).eq('id', batchId);
     }
 
-    // ── Step 3: Compute aggregate metrics ──
-    const totalViolations = totalCritical + totalSerious + totalModerate + totalMinor;
-    const score = urls.length > 0
-      ? Math.round(perPageResults
-          .filter(r => r.status === 'ok')
-          .reduce((sum, r) => sum + r.score, 0) / Math.max(1, pagesCompleted))
-      : 0;
-    const bigSix = computeBigSix(allViolations);
+    console.log(`\n=== Batch Complete ===`);
+    console.log(`Pages: ${pagesCompleted}/${urls.length}, Failed: ${pagesFailed}`);
 
-    console.log(`\nAggregate: Score=${score}, Violations=${totalViolations}, Pages=${pagesCompleted}, Failed=${pagesFailed}`);
-
-    // ── Step 4: Create scan record ──
-    const scanId = crypto.randomUUID();
-    const { error: scanError } = await supabase.from('scans').insert({
-      id: scanId,
-      user_id: userId,
-      url: baseUrl,
-      status: 'completed',
-      compliance_score: score,
-      total_violations: totalViolations,
-      critical_count: totalCritical,
-      serious_count: totalSerious,
-      moderate_count: totalModerate,
-      minor_count: totalMinor,
-      wcag_level: 'AA',
-      wcag_version: '2.1',
-      big_six: bigSix,
-      pages_scanned: pagesCompleted + pagesFailed,
-      pages_requested: urls.length,
-      completed_at: new Date().toISOString(),
-      keyboard_issues: [],
-      viewport_breakdown: [],
-      has_overlay_widget: false,
-    });
-
-    if (scanError) {
-      console.error('Failed to create scan record:', scanError);
-      throw scanError;
-    }
-    console.log(`Created scan: ${scanId}`);
-
-    // ── Step 5: Insert violations ──
-    if (allViolations.length > 0) {
-      const violationsToInsert = allViolations.map((v, i) => ({
-        scan_id: scanId,
-        rule_id: v.id,
-        rule_description: (v.description || v.help || '').slice(0, 500),
-        impact: v.impact,
-        wcag_criterion: mapWcagTag(v.tags),
-        wcag_level: 'AA',
-        page_url: v.page_url || baseUrl,
-        element_html: v.nodes?.[0]?.html?.slice(0, 1000) || '',
-        element_selector: v.nodes?.[0]?.target?.join(' ')?.slice(0, 500) || '',
-        node_count: v.nodeCount || 1,
-        tags: v.tags || [],
-        fix_summary: (v.help || '').slice(0, 500),
-        fix_detail: (v.description || '').slice(0, 2000),
-        help_url: v.helpUrl || '',
-        sort_order: i,
-      }));
-
-      const { error: viError } = await supabase.from('violations').insert(violationsToInsert);
-      if (viError) console.error('Failed to insert violations:', viError);
-      else console.log(`Inserted ${violationsToInsert.length} violations`);
-    }
-
-    // ── Step 6: Create report ──
-    const { data: report } = await supabase
-      .from('reports')
-      .insert({
-        scan_id: scanId,
-        user_id: userId,
-        name: `Monitoring scan of ${baseUrl} - ${new Date().toLocaleDateString()}`,
-        is_public: false,
-      })
+    // ── Step 4: Update monitored_sites ──
+    // Store both batch_id (for per-page breakdown link) and last_scan_id
+    // (so the monitoring page score cards still work via the FK join).
+    const { data: firstCompleted } = await supabase
+      .from('scans')
       .select('id')
-      .single();
+      .eq('batch_id', batchId)
+      .eq('status', 'completed')
+      .order('queue_position', { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
-    const reportId = report?.id || null;
-    console.log(`Created report: ${reportId}`);
-
-    // ── Step 7: Update monitored_sites ──
     await supabase
       .from('monitored_sites')
       .update({
-        last_scan_id: scanId,
-        last_report_id: reportId,
+        last_batch_id: batchId,
+        last_scan_id: firstCompleted?.id || null,
         last_scanned_at: new Date().toISOString(),
       })
       .eq('id', siteId);
 
-    console.log(`Updated monitored site ${siteId}`);
+    console.log(`Updated monitored site ${siteId} with batch ${batchId}`);
 
-    // ── Step 8: Trigger alert check on Vercel ──
+    // ── Step 5: Trigger alert check ──
     try {
-      const alertRes = await fetch(`${APP_URL}/api/monitoring/check-alerts`, {
+      await fetch(`${APP_URL}/api/monitoring/check-alerts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CRON_SECRET}`,
         },
-        body: JSON.stringify({ siteId, newScanId: scanId }),
+        body: JSON.stringify({ siteId, newScanId: batchId }),
       });
-      if (!alertRes.ok) console.error('Alert check failed:', alertRes.status);
-      else console.log('Alert check triggered');
     } catch (alertErr) {
       console.error('Alert check error:', alertErr.message);
     }
 
-    // ── Step 9: Notify Vercel for email ──
+    // ── Step 6: Notify for email ──
     try {
-      const callbackRes = await fetch(`${APP_URL}/api/cron/monitoring-callback`, {
+      await fetch(`${APP_URL}/api/cron/monitoring-callback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CRON_SECRET}`,
         },
         body: JSON.stringify({
-          siteId,
-          userId,
-          scanId,
-          reportId,
+          siteId, userId, batchId,
           url: baseUrl,
-          score,
-          totalViolations,
-          pagesScanned: pagesCompleted + pagesFailed,
-          pagesCompleted,
-          pagesFailed,
+          pagesCompleted, pagesFailed, totalUrls: urls.length,
         }),
       });
-      if (!callbackRes.ok) console.error('Callback failed:', callbackRes.status);
-      else {
-        const body = await callbackRes.json();
-        console.log('Callback response:', body);
-      }
     } catch (cbErr) {
       console.error('Callback error:', cbErr.message);
     }
 
-    console.log('\n=== Monitoring Scan Complete ===');
-    console.log(`Pages scanned: ${pagesCompleted}/${urls.length}`);
-    console.log(`Score: ${score}`);
-    console.log(`Violations: ${totalViolations}`);
-    console.log(`Report: ${reportId}`);
-
+    console.log('Done!');
   } catch (err) {
     console.error('Fatal error:', err);
     process.exit(1);

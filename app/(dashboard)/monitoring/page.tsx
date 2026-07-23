@@ -1013,7 +1013,15 @@ export default function MonitoringPage() {
                                   <span className="text-muted-foreground">Minor Issues</span>
                                   <span className="text-blue-400 font-medium">{site.last_scan.minor_count}</span>
                                 </div>
-                                {site.last_report_id && (
+                                {site.last_batch_id ? (
+                                  <Link
+                                    href={`/batch/${site.last_batch_id}`}
+                                    className="flex items-center justify-center gap-1 py-2 text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    Per-Page Breakdown →
+                                  </Link>
+                                ) : site.last_report_id ? (
                                   <Link
                                     href={`/reports/${site.last_report_id}`}
                                     className="flex items-center justify-center gap-1 py-2 text-xs text-primary hover:text-primary/80 transition-colors"
@@ -1021,7 +1029,7 @@ export default function MonitoringPage() {
                                     <FileText className="w-3 h-3" />
                                     View Report
                                   </Link>
-                                )}
+                                ) : null}
                                 <Link
                                   href={`/monitoring/${site.id}`}
                                   className="flex items-center justify-center gap-1 py-2 text-xs text-primary/70 hover:text-primary transition-colors border-t border-border/50 mt-2 pt-2"
