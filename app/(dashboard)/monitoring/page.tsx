@@ -882,6 +882,13 @@ export default function MonitoringPage() {
                             <p className="text-xs text-muted-foreground truncate">{site.url}</p>
                           </div>
                           <div className="flex items-center gap-1 ml-2">
+                            <Link
+                              href={`/monitoring/${site.id}`}
+                              className="p-1.5 rounded-lg text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
+                              title="Site Dashboard"
+                            >
+                              <BarChart3 className="w-3.5 h-3.5" />
+                            </Link>
                             <button
                               onClick={() => toggleSite(site)}
                               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
