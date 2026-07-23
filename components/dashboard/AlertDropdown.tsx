@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { Bell, Check, AlertTriangle, TrendingDown, TrendingUp, X, Loader2 } from 'lucide-react'
+import { Bell, Check, AlertTriangle, TrendingDown, TrendingUp, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -23,9 +22,8 @@ export function AlertDropdown() {
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [markingRead, setMarkingRead] = useState<Set<string>>(new Set())
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -45,40 +43,37 @@ export function AlertDropdown() {
     return () => clearInterval(interval)
   }, [fetchAlerts])
 
+  // Close on click outside
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node
-      const clickedInsideButton = buttonRef.current?.contains(target)
-      const clickedInsideDropdown = dropdownRef.current?.contains(target)
-      if (!clickedInsideButton && !clickedInsideDropdown) {
+    if (!isOpen) return
+    function handleClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) {
         setIsOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    // Use mousedown for immediate response
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen])
 
+  // Close on Escape
   useEffect(() => {
     if (!isOpen) return
-    const handleScroll = () => setIsOpen(false)
-    window.addEventListener('scroll', handleScroll, { capture: true })
-    window.addEventListener('resize', handleScroll)
-    return () => {
-      window.removeEventListener('scroll', handleScroll, { capture: true })
-      window.removeEventListener('resize', handleScroll)
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsOpen(false)
     }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
   }, [isOpen])
 
   const handleMarkRead = useCallback(async (alertId: string) => {
     setMarkingRead(prev => new Set(prev).add(alertId))
-
     try {
       const response = await fetch(`/api/monitoring/alerts/${alertId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ read: true }),
       })
-
       if (response.ok) {
         setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, read: true } : a))
         setUnreadCount(prev => Math.max(0, prev - 1))
@@ -125,20 +120,9 @@ export function AlertDropdown() {
     }
   }
 
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
-
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
-    }
-  }, [isOpen])
-
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={containerRef}>
       <button
-        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "relative p-2 rounded-xl transition-colors",
@@ -155,8 +139,8 @@ export function AlertDropdown() {
         )}
       </button>
 
-      {isOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed w-96 bg-card border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-text-secondary" />
@@ -180,11 +164,7 @@ export function AlertDropdown() {
           </div>
 
           <div className="max-h-80 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
-              </div>
-            ) : alerts.length === 0 ? (
+            {alerts.length === 0 ? (
               <div className="text-center py-8 px-4">
                 <Bell className="w-8 h-8 text-text-muted mx-auto mb-2" />
                 <p className="text-sm text-text-secondary">No new alerts</p>
@@ -261,8 +241,7 @@ export function AlertDropdown() {
               </Link>
             </div>
           )}
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   )
