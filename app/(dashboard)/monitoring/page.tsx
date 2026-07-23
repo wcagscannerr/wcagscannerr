@@ -9,7 +9,7 @@ import {
   Zap, ChevronDown, ChevronUp, MapPin, BarChart3,
   Eye, EyeOff, ArrowUpRight, CheckCircle2, XCircle,
   AlertOctagon, Layers, Monitor, Wifi, WifiOff, Search,
-  Filter, MoreHorizontal, ExternalLink, Info
+  Filter, MoreHorizontal, ExternalLink, Info, FileText
 } from 'lucide-react'
 import { useSubscription } from '@/hooks/useSubscription'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell } from 'recharts'
@@ -1009,12 +1009,19 @@ export default function MonitoringPage() {
                                 {site.last_report_id && (
                                   <Link
                                     href={`/reports/${site.last_report_id}`}
-                                    className="flex items-center justify-center gap-1 mt-3 py-2 text-xs text-primary hover:text-primary/80 transition-colors"
+                                    className="flex items-center justify-center gap-1 py-2 text-xs text-primary hover:text-primary/80 transition-colors"
                                   >
-                                    <ExternalLink className="w-3 h-3" />
-                                    View Full Report
+                                    <FileText className="w-3 h-3" />
+                                    View Report
                                   </Link>
                                 )}
+                                <Link
+                                  href={`/monitoring/${site.id}`}
+                                  className="flex items-center justify-center gap-1 py-2 text-xs text-primary/70 hover:text-primary transition-colors border-t border-border/50 mt-2 pt-2"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Site Dashboard →
+                                </Link>
                               </div>
                             </motion.div>
                           )}
