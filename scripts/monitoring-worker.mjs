@@ -230,16 +230,19 @@ async function scanPage(browser, url) {
   }
 }
 
-// ── Compute Big Six from all violations ──
+// ── Compute Big Six as flat object (matches lib/scanner/engine.ts format) ──
 function computeBigSix(allViolations) {
-  const ruleCounts = {};
+  const counts = { contrast: 0, alt_text: 0, labels: 0, links: 0, buttons: 0, lang: 0 };
   for (const v of allViolations) {
-    ruleCounts[v.id] = (ruleCounts[v.id] || 0) + v.nodeCount;
+    const id = v.id || '';
+    if (id.includes('color-contrast') || id.includes('contrast')) counts.contrast += Math.max(1, v.nodeCount || 1);
+    else if (id.includes('alt-text') || id.includes('image-alt')) counts.alt_text += Math.max(1, v.nodeCount || 1);
+    else if (id.includes('label') || id.includes('name')) counts.labels += Math.max(1, v.nodeCount || 1);
+    else if (id.includes('link-name') || id.includes('link-in-text')) counts.links += Math.max(1, v.nodeCount || 1);
+    else if (id.includes('button') || id.includes('aria')) counts.buttons += Math.max(1, v.nodeCount || 1);
+    else if (id.includes('lang') || id.includes('html-has-lang')) counts.lang += Math.max(1, v.nodeCount || 1);
   }
-  const sorted = Object.entries(ruleCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
-  return sorted.map(([ruleId, count]) => ({ ruleId, instances: count }));
+  return counts;
 }
 
 // ── Main ──
