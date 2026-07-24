@@ -36,7 +36,7 @@ export default function RefundPolicyPage() {
             <li><strong>7-day money-back guarantee</strong> for new subscribers (first charge only).</li>
             <li>No refunds after 7 days — cancel to stop future charges.</li>
             <li><strong>Annual plan refunds:</strong> Prorated refund for unused months within 30 days of purchase.</li>
-            <li>To request a refund: email <a href="mailto:support@wcagscanner.com" className="text-accent hover:underline">support@wcagscanner.com</a> with your account email and reason.</li>
+            <li>To request a refund: email <a href="mailto:reports@wcagscannerr.com" className="text-accent hover:underline">reports@wcagscannerr.com</a> with your account email and reason.</li>
             <li>Refunds processed within 5-10 business days via Stripe to your original payment method.</li>
             <li>If we discontinue the service, all subscribers receive a full prorated refund automatically.</li>
           </ul>

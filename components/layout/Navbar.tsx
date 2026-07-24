@@ -11,7 +11,6 @@ const navLinks = [
   { href: '/statement-generator', label: 'Statement Generator' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/demand-letter', label: 'Demand Letter' },
-  { href: '/compare', label: 'Comparison FAQ' },
   { href: '/contrast-checker', label: 'Contrast Checker' },
 ]
 

@@ -69,7 +69,7 @@ export default function TermsPage() {
 
           <h2 id="refund">6. Refund Policy</h2>
           <p>
-            We offer a 7-day refund for first-time subscribers who are not satisfied. Refunds are not available after 7 days or for subsequent billing cycles. To request a refund, email support@wcagscanner.com within 7 days of charge.
+            We offer a 7-day refund for first-time subscribers who are not satisfied. Refunds are not available after 7 days or for subsequent billing cycles. To request a refund, email reports@wcagscannerr.com within 7 days of charge.
           </p>
 
           <h2 id="ip">7. Intellectual Property</h2>
@@ -94,7 +94,7 @@ export default function TermsPage() {
 
           <h2 id="contact-tos">11. Contact</h2>
           <p>
-            Email: <a href="mailto:support@wcagscanner.com" className="text-accent hover:underline">support@wcagscanner.com</a>
+            Email: <a href="mailto:reports@wcagscannerr.com" className="text-accent hover:underline">reports@wcagscannerr.com</a>
           </p>
         </LegalPageLayout>
       </div>

@@ -15,6 +15,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/terms-of-service',
     '/refund-policy',
     '/disclaimer',
+    '/changelog',
+    '/accessibility-statement',
+    '/cookie-policy',
+    '/gdpr',
+    '/about',
+    '/contrast-checker',
   ]
   return routes.map((route) => ({
     url: `${baseUrl}${route}`,

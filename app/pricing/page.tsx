@@ -239,7 +239,7 @@ export default function PricingPage() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-2">
-                            {plan.id === 'enterprise' ? 'Contact Sales' : `Start ${plan.name} Trial`}
+                            {plan.id === 'enterprise' ? 'Try Enterprise' : `Start ${plan.name} Trial`}
                             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                           </span>
                         )}

@@ -83,10 +83,10 @@ export default function LegalPageLayout({ title, subtitle, lastUpdated, children
               <p className="text-text-secondary text-sm">
                 Questions? Email us at{' '}
                 <a
-                  href="mailto:support@wcagscanner.com"
+                  href="mailto:reports@wcagscannerr.com"
                   className="text-accent hover:text-accent-hover transition-colors"
                 >
-                  support@wcagscanner.com
+                  reports@wcagscannerr.com
                 </a>
               </p>
             </div>

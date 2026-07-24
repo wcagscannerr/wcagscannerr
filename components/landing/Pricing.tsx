@@ -88,7 +88,7 @@ const plans: PlanTile[] = [
       'VPAT & ACR generation',
       'Dedicated support',
     ],
-    cta: 'Contact Sales',
+    cta: 'Try Enterprise',
     popular: false,
     gradient: 'from-amber-500/10 to-orange-500/10',
     glowColor: 'hover:shadow-amber-500/10',

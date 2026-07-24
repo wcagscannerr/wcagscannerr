@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 id="your-rights">4. Your Rights (GDPR & CCPA)</h2>
           <ul>
-            <li><strong>Right to access:</strong> Email us at support@wcagscanner.com and we&apos;ll send you all your data within 30 days.</li>
+            <li><strong>Right to access:</strong> Email us at reports@wcagscannerr.com and we&apos;ll send you all your data within 30 days.</li>
             <li><strong>Right to deletion:</strong> Email us and we&apos;ll delete your account and all associated data within 7 days.</li>
             <li><strong>Right to correction:</strong> Update your profile information anytime in the Settings page.</li>
             <li><strong>Right to portability:</strong> Request a CSV export of your scan history.</li>
@@ -95,7 +95,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 id="contact">9. Contact Us</h2>
           <p>
-            Email: <a href="mailto:support@wcagscanner.com" className="text-accent hover:underline">support@wcagscanner.com</a>
+            Email: <a href="mailto:reports@wcagscannerr.com" className="text-accent hover:underline">reports@wcagscannerr.com</a>
           </p>
         </LegalPageLayout>
       </div>

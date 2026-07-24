@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ScanLine, Github, Twitter } from 'lucide-react'
+import { ScanLine, Github, Mail } from 'lucide-react'
 
 const footerLinks = {
   Product: [
@@ -11,12 +11,16 @@ const footerLinks = {
   Resources: [
     { label: 'Help Center', href: '/help-center' },
     { label: 'Changelog', href: '/changelog' },
+    { label: 'Comparison FAQ', href: '/compare' },
   ],
   Legal: [
     { label: 'Privacy Policy', href: '/privacy-policy' },
     { label: 'Terms of Service', href: '/terms-of-service' },
     { label: 'Disclaimer', href: '/disclaimer' },
     { label: 'Refund Policy', href: '/refund-policy' },
+    { label: 'Cookie Policy', href: '/cookie-policy' },
+    { label: 'GDPR Compliance', href: '/gdpr' },
+    { label: 'Accessibility Statement', href: '/accessibility-statement' },
   ],
   Company: [
     { label: 'About', href: '/about' },
@@ -42,11 +46,11 @@ export default function Footer() {
               Automated accessibility compliance scanning for modern web teams.
             </p>
             <div className="flex items-center gap-3">
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a href="https://github.com/wcagscannerr" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="GitHub Organization">
                 <Github className="w-4 h-4" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                <Twitter className="w-4 h-4" />
+              <a href="mailto:reports@wcagscannerr.com" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Email us">
+                <Mail className="w-4 h-4" />
               </a>
             </div>
           </div>
