@@ -15,7 +15,7 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 40%;
     --accent: 262.1 83.3% 57.8%;
     --accent-foreground: 210 40% 98%;
     --accent-hover: 262 83% 50%;
@@ -25,13 +25,13 @@
     --input: 220 13% 55%;
     --ring: 262.1 83.3% 57.8%;
     --radius: 0px;
-    
+
     /* WCAG Scanner Custom - Light Mode Premium */
     --surface: 0 0% 100%;
     --surface-elevated: 220 14% 96%;
     --text-primary: 222 47% 11%;
     --text-secondary: 215 16% 47%;
-    --text-muted: 215 14% 65%;
+    --text-muted: 215 16% 40%;
     --success: 160 84% 39%;
     --danger: 0 84% 60%;
     --warning: 38 92% 50%;
@@ -84,7 +84,7 @@
     --border: 240 10% 12%;
     --input: 240 10% 12%;
     --ring: 263 70% 66%;
-    
+
     /* WCAG Scanner Custom - Dark Mode (Deep Void Black) */
     --surface: 240 20% 2%;
     --surface-elevated: 240 14% 9%;
@@ -152,7 +152,7 @@
                 radial-gradient(circle at 80% 80%, hsl(250 60% 55% / 0.08) 0%, transparent 50%);
     pointer-events: none; z-index: 0;
   }
-  
+
   /* Glassmorphism Panels */
   .glass-panel {
     background: hsl(var(--glass-bg));
@@ -166,7 +166,7 @@
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid hsl(var(--glass-border));
   }
-  
+
   /* Glow Borders */
   .glow-border {
     position: relative;
@@ -188,7 +188,7 @@
     box-shadow: 0 0 20px hsl(var(--glow-danger)),
                 inset 0 1px 0 0 hsl(var(--danger) / 0.1);
   }
-  
+
   /* Gradient Text */
   .gradient-text {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(280 70% 60%) 100%);
@@ -196,7 +196,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+
   /* Magnetic Button Effect */
   .btn-magnetic {
     @apply relative overflow-hidden transition-all duration-300;
@@ -210,7 +210,7 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 20px hsl(var(--primary) / 0.3);
   }
-  
+
   /* Card Lift Effect */
   .card-lift {
     @apply transition-all duration-300;
@@ -219,32 +219,32 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 30px -4px hsl(var(--primary) / 0.1);
   }
-  
+
   /* Micro Badge Styles */
   .badge-glow {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase;
   }
   .badge-glow-success {
-    @apply badge-glow bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+    @apply badge-glow bg-emerald-500/15 text-emerald-600 border border-emerald-500/20;
     box-shadow: 0 0 8px hsl(var(--glow-success));
   }
   .badge-glow-danger {
-    @apply badge-glow bg-red-500/10 text-red-400 border border-red-500/20;
+    @apply badge-glow bg-red-500/15 text-red-600 border border-red-500/20;
     box-shadow: 0 0 8px hsl(var(--glow-danger));
   }
   .badge-glow-warning {
-    @apply badge-glow bg-amber-500/10 text-amber-400 border border-amber-500/20;
+    @apply badge-glow bg-amber-500/15 text-amber-600 border border-amber-500/20;
   }
   .badge-glow-info {
-    @apply badge-glow bg-blue-500/10 text-blue-400 border border-blue-500/20;
+    @apply badge-glow bg-blue-500/15 text-blue-600 border border-blue-500/20;
   }
-  
+
   /* Section Divider */
   .section-divider {
     @apply h-px w-full;
     background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
   }
-  
+
   /* Scrollbahr */
   .custom-scrollbar::-webkit-scrollbar { width: 4px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

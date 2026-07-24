@@ -23,7 +23,7 @@ export default function StatementGeneratorPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-24 pb-20 bg-background">
+      <main id="main-content" className="min-h-screen pt-24 pb-20 bg-background">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link
             href="/"

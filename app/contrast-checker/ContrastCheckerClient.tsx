@@ -107,7 +107,7 @@ export function ContrastCheckerClient() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
       <Link href="/"
-        className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm 
+        className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm
           mb-6 inline-flex items-center gap-2">
         <ArrowLeft className="w-4 h-4" /> Back to Home
       </Link>
@@ -138,6 +138,7 @@ export function ContrastCheckerClient() {
               />
               <input
                 type="text"
+                aria-label="Text color hex code"
                 value={foreground}
                 onChange={(e) => setForeground(e.target.value)}
                 className="flex-1 bg-[var(--background)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] font-mono text-sm uppercase"
@@ -160,6 +161,7 @@ export function ContrastCheckerClient() {
               />
               <input
                 type="text"
+                aria-label="Background color hex code"
                 value={background}
                 onChange={(e) => setBackground(e.target.value)}
                 className="flex-1 bg-[var(--background)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] font-mono text-sm uppercase"

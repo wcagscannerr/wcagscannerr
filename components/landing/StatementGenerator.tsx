@@ -159,8 +159,10 @@ export default function StatementGenerator() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">WCAG Target Level</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="wcag-level">WCAG Target Level</label>
             <select
+              id="wcag-level"
+              aria-label="WCAG Target Level"
               value={form.wcagLevel}
               onChange={(e) => updateField('wcagLevel', e.target.value)}
               className="w-full px-3 py-2.5 bg-secondary/30 border border-border rounded-xl text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm appearance-none"
@@ -186,6 +188,7 @@ export default function StatementGenerator() {
             <label className="block text-sm font-medium text-text-secondary mb-1">Last Audit Date</label>
             <input
               type="date"
+              aria-label="Last audit date"
               value={form.lastAuditDate}
               onChange={(e) => updateField('lastAuditDate', e.target.value)}
               className="w-full px-3 py-2.5 bg-surface-elevated border border-border rounded-lg text-text-primary outline-none focus:border-accent transition-colors text-sm"
