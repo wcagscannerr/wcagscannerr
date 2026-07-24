@@ -139,7 +139,7 @@ export default function Hero() {
                   <div className="w-3 h-3 rounded-full bg-red-400/80" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
                   <div className="w-3 h-3 rounded-full bg-green-400/80" />
-                  <div className="ml-auto text-xs text-muted-foreground font-mono">wcagscanner.com</div>
+                  <div className="ml-auto text-xs text-muted-foreground font-mono">wcagscannerr.com</div>
                 </div>
                 
                 {/* Mock Score Card */}
